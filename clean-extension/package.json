@@ -2,7 +2,7 @@
   "name": "clean-language",
   "displayName": "Clean Language",
   "description": "Official Clean Language extension with LSP support, cleen - the Clean Language Manager integration, syntax highlighting, autocompletion, and tab enforcement",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "publisher": "IvanPasco",
   "author": "Ivan Pasco",
   "license": "MIT",
