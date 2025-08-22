@@ -1,0 +1,273 @@
+{
+  "name": "clean-language",
+  "displayName": "Clean Language",
+  "description": "Official Clean Language extension with LSP support, cleen - the Clean Language Manager integration, syntax highlighting, autocompletion, and tab enforcement",
+  "version": "1.2.1",
+  "publisher": "IvanPasco",
+  "author": "Ivan Pasco",
+  "license": "MIT",
+  "galleryBanner": {
+    "color": "#4A90E2",
+    "theme": "light"
+  },
+  "engines": {
+    "vscode": "^1.70.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Language Packs",
+    "Linters",
+    "Debuggers"
+  ],
+  "keywords": [
+    "clean",
+    "clean-language",
+    "webassembly",
+    "wasm",
+    "compiler",
+    "programming-language",
+    "syntax-highlighting",
+    "language-server",
+    "lsp",
+    "autocompletion",
+    "tabs",
+    "ivan-pasco"
+  ],
+  "activationEvents": [
+    "onLanguage:clean"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "clean",
+        "extensions": [
+          ".cln",
+          ".test.cln"
+        ],
+        "aliases": [
+          "Clean Language",
+          "clean"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "configurationDefaults": {
+      "[clean]": {
+        "editor.insertSpaces": false,
+        "editor.tabSize": 4,
+        "editor.detectIndentation": false,
+        "editor.useTabStops": true,
+        "files.trimTrailingWhitespace": true,
+        "files.insertFinalNewline": true,
+        "editor.renderWhitespace": "boundary"
+      }
+    },
+    "grammars": [
+      {
+        "language": "clean",
+        "scopeName": "source.clean",
+        "path": "./syntaxes/clean.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "clean",
+        "path": "./snippets/clean.code-snippets"
+      }
+    ],
+    "commands": [
+      {
+        "command": "clean.runFile",
+        "title": "$(play) Run Clean File",
+        "category": "Clean Language",
+        "icon": "$(play)"
+      },
+      {
+        "command": "clean.compileFile",
+        "title": "$(gear) Compile Clean File",
+        "category": "Clean Language",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "clean.compileWithOptions",
+        "title": "$(settings-gear) Compile with Options",
+        "category": "Clean Language",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "clean.testFile",
+        "title": "$(beaker) Test Clean File",
+        "category": "Clean Language",
+        "icon": "$(beaker)"
+      },
+      {
+        "command": "clean.selectVersion",
+        "title": "$(versions) Select Clean Language Version",
+        "category": "Clean Language",
+        "icon": "$(versions)"
+      },
+      {
+        "command": "clean.showVersionInfo",
+        "title": "$(info) Show Version Info",
+        "category": "Clean Language",
+        "icon": "$(info)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "when": "resourceExtname == .cln",
+          "command": "clean.runFile",
+          "group": "navigation@1"
+        },
+        {
+          "when": "resourceExtname == .cln",
+          "command": "clean.compileFile",
+          "group": "navigation@2"
+        },
+        {
+          "when": "resourceExtname == .cln",
+          "command": "clean.compileWithOptions",
+          "group": "navigation@3"
+        },
+        {
+          "when": "resourceExtname == .cln",
+          "command": "clean.testFile",
+          "group": "navigation@4"
+        }
+      ],
+      "editor/context": [
+        {
+          "when": "resourceExtname == .cln",
+          "command": "clean.runFile",
+          "group": "clean@1"
+        },
+        {
+          "when": "resourceExtname == .cln",
+          "command": "clean.compileFile",
+          "group": "clean@2"
+        },
+        {
+          "when": "resourceExtname == .cln",
+          "command": "clean.compileWithOptions",
+          "group": "clean@3"
+        },
+        {
+          "when": "resourceExtname == .cln",
+          "command": "clean.testFile",
+          "group": "clean@4"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "clean.runFile",
+          "when": "resourceExtname == .cln"
+        },
+        {
+          "command": "clean.compileFile",
+          "when": "resourceExtname == .cln"
+        },
+        {
+          "command": "clean.compileWithOptions",
+          "when": "resourceExtname == .cln"
+        },
+        {
+          "command": "clean.testFile",
+          "when": "resourceExtname == .cln"
+        },
+        {
+          "command": "clean.selectVersion",
+          "when": "true"
+        },
+        {
+          "command": "clean.showVersionInfo",
+          "when": "true"
+        }
+      ]
+    },
+    "configuration": {
+      "type": "object",
+      "title": "Clean Language",
+      "properties": {
+        "clean.indentation.enforceTabsOverSpaces": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically enforce tabs over spaces for Clean Language files"
+        },
+        "clean.indentation.tabSize": {
+          "type": "number",
+          "default": 4,
+          "description": "Number of spaces equivalent to one tab in Clean Language files"
+        },
+        "clean.manager.path": {
+          "type": "string",
+          "default": "cleen",
+          "description": "Path to the cleen - the Clean Language Manager executable"
+        },
+        "clean.compiler.path": {
+          "type": "string",
+          "default": "",
+          "description": "Custom path to the Clean Language compiler (optional)"
+        },
+        "clean.lsp.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Clean Language Server Protocol support"
+        },
+        "clean.lsp.debug": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable debug logging for the Language Server"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "package": "vsce package",
+    "publish": "vsce publish",
+    "publish:ovsx": "ovsx publish",
+    "publish:both": "npm run publish && npm run publish:ovsx"
+  },
+  "devDependencies": {
+    "@types/node": "18.x",
+    "@types/vscode": "^1.70.0",
+    "@typescript-eslint/eslint-plugin": "^5.45.0",
+    "@typescript-eslint/parser": "^5.45.0",
+    "@vscode/test-electron": "^2.2.0",
+    "cheerio": "^1.0.0-rc.12",
+    "eslint": "^8.28.0",
+    "ovsx": "^0.10.5",
+    "typescript": "^4.9.4",
+    "vsce": "^1.103.1"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^8.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ivan-Pasco/clean-language-extension.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Ivan-Pasco/clean-language-extension/issues"
+  },
+  "homepage": "https://github.com/Ivan-Pasco/clean-language-extension#readme",
+  "markdown": "github",
+  "icon": "icon.png",
+  "badges": [
+    {
+      "url": "https://img.shields.io/badge/VS%20Code-1.70.0+-blue.svg",
+      "description": "VS Code 1.70.0+"
+    },
+    {
+      "url": "https://img.shields.io/badge/Cursor-Compatible-green.svg",
+      "description": "Cursor Compatible"
+    }
+  ]
+}
