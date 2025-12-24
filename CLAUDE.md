@@ -8,6 +8,17 @@ This is a Rust-based compiler for Clean Language, a type-safe programming langua
 
 Language characteristics are described in the [Language Specification](./Language-Specification.md). if you find something that is not described in the specification, propose a change to the specification before implementing it. When something is added you need to update the specification.
 
+## Platform Architecture
+
+The runtime platform architecture is documented in [platform-architecture/](./platform-architecture/README.md). This includes:
+
+- **[Host Bridge Specification](./platform-architecture/HOST_BRIDGE.md)** - All portable host functions (console, math, string, database, file I/O, HTTP client, crypto)
+- **[Memory Model](./platform-architecture/MEMORY_MODEL.md)** - WASM memory layout, string format, bump allocator
+- **[Server Extensions](./platform-architecture/SERVER_EXTENSIONS.md)** - HTTP server-specific functions (routing, request context, auth)
+- **[Implementing a New Host](./platform-architecture/IMPLEMENTING_HOST.md)** - Guide for building new runtime implementations
+
+When modifying host functions or adding new ones, always update the platform architecture documentation.
+
 ## Common Commands
 
 ### Building and Testing
@@ -181,3 +192,6 @@ When implementing new features:
 - Maintain functional implementations while fixing underlying issues
 - Document complex issues that require multi-step solutions
 - Always prefer proper fixes over workarounds
+- our goal is to reach 100% accuracy on the whole compile and excecution  process. There should be no errors, we wont stop until reaching it. The process should include the testing of all files in the tests folder
+- all test files should be inside tests/cln folder inside a logical  category, all the tests compiled from tests/cln folder should be compiled to tests/output folder. before creating a new test file read the tests in the category to verify if there is already a test for it, and if you need to create a new one save it in the same folder.
+- for research about rust compilers or pest parser use context7
