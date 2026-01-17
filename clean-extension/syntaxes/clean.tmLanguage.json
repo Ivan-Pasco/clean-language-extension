@@ -1,0 +1,346 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Clean Language",
+  "scopeName": "source.clean",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#framework-blocks" },
+    { "include": "#http-methods" },
+    { "include": "#keywords" },
+    { "include": "#types" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#booleans" },
+    { "include": "#apply-blocks" },
+    { "include": "#function-definitions" },
+    { "include": "#class-definitions" },
+    { "include": "#method-calls" },
+    { "include": "#operators" },
+    { "include": "#identifiers" }
+  ],
+  "repository": {
+    "framework-blocks": {
+      "patterns": [
+        {
+          "name": "keyword.declaration.block.clean",
+          "match": "\\b(plugins|import|data|endpoints|server|component|screen|page|styles|auth|protected|login|roles|canvasScene|draw|onFrame)\\b(?=\\s*:)"
+        },
+        {
+          "name": "keyword.other.subblock.clean",
+          "match": "\\b(where|order|limit|offset|include|guard|returns|cache|handle|state|props|render|handlers|computed|variables|global|session|jwt|init|update|assets|middleware|cors|static|template)\\b(?=\\s*:)"
+        },
+        {
+          "name": "meta.data-model.clean",
+          "match": "^\\s*(data)\\s+([A-Z][a-zA-Z0-9_]*)\\s*:",
+          "captures": {
+            "1": { "name": "keyword.declaration.block.clean" },
+            "2": { "name": "entity.name.type.model.clean" }
+          }
+        },
+        {
+          "name": "meta.component.clean",
+          "match": "^\\s*(component|screen|page)\\s+([A-Z][a-zA-Z0-9_]*)\\s*:",
+          "captures": {
+            "1": { "name": "keyword.declaration.block.clean" },
+            "2": { "name": "entity.name.type.component.clean" }
+          }
+        },
+        {
+          "name": "meta.canvas-scene.clean",
+          "match": "^\\s*(canvasScene)\\s+([A-Z][a-zA-Z0-9_]*)\\s*:",
+          "captures": {
+            "1": { "name": "keyword.declaration.block.clean" },
+            "2": { "name": "entity.name.type.scene.clean" }
+          }
+        },
+        {
+          "name": "support.function.framework.clean",
+          "match": "\\b(json|html|redirect|notFound|error|rawHtml|escape|slot|hashPassword|verifyPassword|deltaTime|time|fps|send|status|cookie|header|render|partial)\\b"
+        },
+        {
+          "name": "support.class.framework.clean",
+          "match": "\\b(Data|Auth|req|res|canvas|sprite|audio|input|collision|camera|ease|db|ctx|session|cookies)\\b"
+        }
+      ]
+    },
+    "http-methods": {
+      "patterns": [
+        {
+          "name": "meta.http-endpoint.clean",
+          "match": "^\\s*(GET|POST|PUT|PATCH|DELETE)\\s+(\"[^\"]+\")\\s*:",
+          "captures": {
+            "1": { "name": "keyword.other.http-method.clean" },
+            "2": { "name": "string.quoted.double.url.clean" }
+          }
+        },
+        {
+          "name": "keyword.other.http-method.clean",
+          "match": "\\b(GET|POST|PUT|PATCH|DELETE)\\b(?=\\s+\")"
+        }
+      ]
+    },
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.clean",
+          "begin": "//",
+          "end": "$",
+          "captures": {
+            "0": { "name": "punctuation.definition.comment.clean" }
+          }
+        },
+        {
+          "name": "comment.block.clean",
+          "begin": "/\\*",
+          "end": "\\*/",
+          "captures": {
+            "0": { "name": "punctuation.definition.comment.clean" }
+          }
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.clean",
+          "match": "\\b(if|else|then|iterate|in|to|step|while|for|return|error|onError|later|background)\\b"
+        },
+        {
+          "name": "keyword.other.clean",
+          "match": "\\b(function|functions|input|description|class|constructor|is|and|or|not|test|tests|constant|private|base|import|from|as)\\b"
+        },
+        {
+          "name": "keyword.control.start.clean",
+          "match": "\\b(start)\\b"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "storage.type.primitive.clean",
+          "match": "\\b(integer|number|boolean|string|void|any)\\b"
+        },
+        {
+          "name": "storage.type.collection.clean",
+          "match": "\\b(list|matrix|pairs)\\b"
+        },
+        {
+          "name": "storage.type.sized.clean",
+          "match": "\\b(integer|number):(8|16|32|64|128)u?\\b"
+        },
+        {
+          "name": "storage.type.builtin-class.clean",
+          "match": "\\b(Math|String|List|File|Http)\\b"
+        },
+        {
+          "name": "storage.type.framework.clean",
+          "match": "\\b(Response|Request|Context|Session|Cookie|Plugin|Model)\\b"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.clean",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.clean",
+              "match": "\\\\."
+            },
+            {
+              "name": "meta.embedded.expression.clean",
+              "begin": "\\{",
+              "end": "\\}",
+              "patterns": [
+                { "include": "#identifiers" },
+                { "include": "#method-calls" }
+              ],
+              "beginCaptures": {
+                "0": { "name": "punctuation.definition.template-expression.begin.clean" }
+              },
+              "endCaptures": {
+                "0": { "name": "punctuation.definition.template-expression.end.clean" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.float.clean",
+          "match": "-?\\d+\\.\\d+"
+        },
+        {
+          "name": "constant.numeric.integer.clean",
+          "match": "-?\\d+"
+        }
+      ]
+    },
+    "booleans": {
+      "patterns": [
+        {
+          "name": "constant.language.boolean.clean",
+          "match": "\\b(true|false)\\b"
+        }
+      ]
+    },
+    "apply-blocks": {
+      "patterns": [
+        {
+          "name": "meta.apply-block.function.clean",
+          "match": "^\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*:",
+          "captures": {
+            "1": { "name": "entity.name.function.clean" },
+            "2": { "name": "punctuation.separator.apply-block.clean" }
+          }
+        },
+        {
+          "name": "meta.apply-block.type.clean",
+          "match": "^\\s*(integer|number|boolean|string|list|matrix|pairs)\\s*:",
+          "captures": {
+            "1": { "name": "storage.type.clean" },
+            "2": { "name": "punctuation.separator.apply-block.clean" }
+          }
+        },
+        {
+          "name": "meta.apply-block.method.clean",
+          "match": "^\\s*([a-zA-Z_][a-zA-Z0-9_]*(?:\\.[a-zA-Z_][a-zA-Z0-9_]*)+)\\s*:",
+          "captures": {
+            "1": { "name": "entity.name.function.method.clean" },
+            "2": { "name": "punctuation.separator.apply-block.clean" }
+          }
+        },
+        {
+          "name": "meta.apply-block.constant.clean",
+          "match": "^\\s*(constant)\\s*:",
+          "captures": {
+            "1": { "name": "storage.modifier.clean" },
+            "2": { "name": "punctuation.separator.apply-block.clean" }
+          }
+        }
+      ]
+    },
+    "function-definitions": {
+      "patterns": [
+        {
+          "name": "meta.function.clean",
+          "begin": "\\b(function)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(\\()",
+          "end": "\\)",
+          "beginCaptures": {
+            "1": { "name": "storage.type.function.clean" },
+            "2": { "name": "entity.name.function.clean" },
+            "3": { "name": "punctuation.definition.parameters.begin.clean" }
+          },
+          "endCaptures": {
+            "0": { "name": "punctuation.definition.parameters.end.clean" }
+          },
+          "patterns": [
+            { "include": "#types" },
+            { "include": "#identifiers" }
+          ]
+        },
+        {
+          "name": "meta.function.block.clean",
+          "match": "^\\s*(functions)\\s*:",
+          "captures": {
+            "1": { "name": "storage.type.function.block.clean" }
+          }
+        }
+      ]
+    },
+    "class-definitions": {
+      "patterns": [
+        {
+          "name": "meta.class.clean",
+          "begin": "\\b(class)\\s+([a-zA-Z_][a-zA-Z0-9_]*)",
+          "end": "$",
+          "beginCaptures": {
+            "1": { "name": "storage.type.class.clean" },
+            "2": { "name": "entity.name.type.class.clean" }
+          },
+          "patterns": [
+            {
+              "name": "meta.class.inheritance.clean",
+              "match": "\\s+(is)\\s+([a-zA-Z_][a-zA-Z0-9_]*)",
+              "captures": {
+                "1": { "name": "storage.modifier.extends.clean" },
+                "2": { "name": "entity.other.inherited-class.clean" }
+              }
+            }
+          ]
+        },
+        {
+          "name": "meta.constructor.clean",
+          "begin": "\\b(constructor)\\s*(\\()",
+          "end": "\\)",
+          "beginCaptures": {
+            "1": { "name": "storage.type.function.constructor.clean" },
+            "2": { "name": "punctuation.definition.parameters.begin.clean" }
+          },
+          "endCaptures": {
+            "0": { "name": "punctuation.definition.parameters.end.clean" }
+          },
+          "patterns": [
+            { "include": "#types" },
+            { "include": "#identifiers" }
+          ]
+        }
+      ]
+    },
+    "method-calls": {
+      "patterns": [
+        {
+          "name": "meta.method-call.builtin.clean",
+          "match": "\\b(Math|String|List|File|Http)\\s*\\.\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*(\\()",
+          "captures": {
+            "1": { "name": "support.class.builtin.clean" },
+            "2": { "name": "support.function.builtin.clean" },
+            "3": { "name": "punctuation.definition.arguments.begin.clean" }
+          }
+        },
+        {
+          "name": "meta.method-call.chain.clean",
+          "match": "([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\.\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*(\\()?",
+          "captures": {
+            "1": { "name": "variable.other.object.clean" },
+            "2": { "name": "entity.name.function.method.clean" },
+            "3": { "name": "punctuation.definition.arguments.begin.clean" }
+          }
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.arithmetic.clean",
+          "match": "\\+|\\-|\\*|\\/|\\%"
+        },
+        {
+          "name": "keyword.operator.comparison.clean",
+          "match": "==|!=|<=|>=|<|>"
+        },
+        {
+          "name": "keyword.operator.logical.clean",
+          "match": "\\b(and|or|not)\\b"
+        },
+        {
+          "name": "keyword.operator.assignment.clean",
+          "match": "="
+        }
+      ]
+    },
+    "identifiers": {
+      "patterns": [
+        {
+          "name": "variable.other.clean",
+          "match": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b"
+        }
+      ]
+    }
+  }
+}

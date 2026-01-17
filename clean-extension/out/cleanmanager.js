@@ -1,50 +1,53 @@
 "use strict";
-/*
+/**
  * Clean Manager Integration
  * Created by Ivan Pasco
  *
  * This module handles integration with cleen for version management
  * and compiler routing in the Clean Language extension.
  */
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CleanManagerIntegration = void 0;
-const vscode = __importStar(require("vscode"));
+const vscode = require("vscode");
 const child_process_1 = require("child_process");
 const util_1 = require("util");
+const cleen_detector_1 = require("./services/cleen-detector");
 const execAsync = (0, util_1.promisify)(child_process_1.exec);
 class CleanManagerIntegration {
     constructor() {
         this.cleanManagerPath = vscode.workspace.getConfiguration('clean').get('manager.path', 'cleen');
+        this.detector = new cleen_detector_1.CleenDetector();
+    }
+    /**
+     * Initialize and auto-detect cleen path
+     */
+    async initialize() {
+        const autoDetect = vscode.workspace.getConfiguration('clean').get('manager.autoDetect', true);
+        if (autoDetect) {
+            const configuredPath = vscode.workspace.getConfiguration('clean').get('manager.path');
+            this.detectionResult = await this.detector.detectCleenPath(configuredPath);
+            if (this.detectionResult.found && this.detectionResult.path) {
+                this.cleanManagerPath = this.detectionResult.path;
+                // Auto-configure if not already configured
+                if (!configuredPath || configuredPath === 'cleen') {
+                    await vscode.workspace.getConfiguration('clean').update('manager.path', this.detectionResult.path, vscode.ConfigurationTarget.Workspace);
+                    console.log(`Auto-configured cleen path: ${this.detectionResult.path} (method: ${this.detectionResult.method})`);
+                }
+            }
+        }
+    }
+    /**
+     * Get the detection result
+     */
+    getDetectionResult() {
+        return this.detectionResult;
     }
     /**
      * Check if cleen is installed and available
      */
     async isInstalled() {
         try {
-            await execAsync(`${this.cleanManagerPath} --version`);
+            await execAsync(`"${this.cleanManagerPath}" --version`);
             return true;
         }
         catch {
@@ -56,7 +59,7 @@ class CleanManagerIntegration {
      */
     async getCurrentVersion() {
         try {
-            const { stdout } = await execAsync(`${this.cleanManagerPath} current`);
+            const { stdout } = await execAsync(`"${this.cleanManagerPath}" current`);
             const version = stdout.trim();
             this.currentVersion = version;
             return version;
@@ -71,7 +74,7 @@ class CleanManagerIntegration {
      */
     async listInstalledVersions() {
         try {
-            const { stdout } = await execAsync(`${this.cleanManagerPath} list`);
+            const { stdout } = await execAsync(`"${this.cleanManagerPath}" list`);
             const lines = stdout.trim().split('\n');
             return lines.map(line => {
                 const trimmedLine = line.trim();
@@ -93,7 +96,7 @@ class CleanManagerIntegration {
                 }
                 else {
                     // Match version pattern like v0.3.0, v0.2.2-ls, etc.
-                    const versionMatch = trimmedLine.match(/v\d+\.\d+\.\d+(?:-[a-zA-Z0-9]+)?/);
+                    const versionMatch = trimmedLine.match(/v?\d+\.\d+\.\d+(?:-[a-zA-Z0-9]+)?/);
                     if (versionMatch) {
                         version = versionMatch[0];
                     }
@@ -118,7 +121,7 @@ class CleanManagerIntegration {
      */
     async listAvailableVersions() {
         try {
-            const { stdout } = await execAsync(`${this.cleanManagerPath} available`);
+            const { stdout } = await execAsync(`"${this.cleanManagerPath}" available`);
             const lines = stdout.trim().split('\n');
             const installedVersions = await this.listInstalledVersions();
             const installedVersionNumbers = new Set(installedVersions.map(v => v.version));
@@ -142,14 +145,14 @@ class CleanManagerIntegration {
                 let version = '';
                 if (trimmedLine.startsWith('• ')) {
                     // Handle lines like "• v0.3.0 (latest)"
-                    const versionMatch = trimmedLine.match(/• (v\d+\.\d+\.\d+(?:-[a-zA-Z0-9]+)?|latest)/);
+                    const versionMatch = trimmedLine.match(/• (v?\d+\.\d+\.\d+(?:-[a-zA-Z0-9]+)?|latest)/);
                     if (versionMatch) {
                         version = versionMatch[1];
                     }
                 }
                 else {
                     // Handle plain version lines
-                    const versionMatch = trimmedLine.match(/^(v\d+\.\d+\.\d+(?:-[a-zA-Z0-9]+)?|latest)(?:\s|$)/);
+                    const versionMatch = trimmedLine.match(/^(v?\d+\.\d+\.\d+(?:-[a-zA-Z0-9]+)?|latest)(?:\s|$)/);
                     if (versionMatch) {
                         version = versionMatch[1];
                     }
@@ -176,7 +179,7 @@ class CleanManagerIntegration {
      */
     async switchToVersion(version) {
         try {
-            const { stdout, stderr } = await execAsync(`${this.cleanManagerPath} use ${version}`);
+            const { stdout, stderr } = await execAsync(`"${this.cleanManagerPath}" use ${version}`);
             if (stderr && !stderr.includes('warning')) {
                 throw new Error(stderr);
             }
@@ -201,7 +204,7 @@ class CleanManagerIntegration {
                 cancellable: false
             }, async (progress) => {
                 progress.report({ message: 'Downloading and installing...' });
-                const { stdout, stderr } = await execAsync(`${this.cleanManagerPath} install ${version}`);
+                const { stdout, stderr } = await execAsync(`"${this.cleanManagerPath}" install ${version}`);
                 if (stderr && !stderr.includes('warning')) {
                     throw new Error(stderr);
                 }
@@ -219,7 +222,7 @@ class CleanManagerIntegration {
      */
     async uninstallVersion(version) {
         try {
-            const { stdout, stderr } = await execAsync(`${this.cleanManagerPath} uninstall ${version}`);
+            const { stdout, stderr } = await execAsync(`"${this.cleanManagerPath}" uninstall ${version}`);
             if (stderr && !stderr.includes('warning')) {
                 throw new Error(stderr);
             }
@@ -236,7 +239,7 @@ class CleanManagerIntegration {
      */
     async runDoctor() {
         try {
-            const { stdout } = await execAsync(`${this.cleanManagerPath} doctor`);
+            const { stdout } = await execAsync(`"${this.cleanManagerPath}" doctor`);
             return stdout;
         }
         catch (error) {
@@ -245,11 +248,17 @@ class CleanManagerIntegration {
         }
     }
     /**
+     * Run diagnostic check for installation
+     */
+    async runDiagnostics() {
+        return await this.detector.runDiagnostics();
+    }
+    /**
      * Initialize the shell environment for cleen
      */
     async initializeEnvironment() {
         try {
-            const { stdout, stderr } = await execAsync(`${this.cleanManagerPath} init`);
+            const { stdout, stderr } = await execAsync(`"${this.cleanManagerPath}" init`);
             if (stderr && !stderr.includes('warning')) {
                 throw new Error(stderr);
             }
@@ -278,7 +287,7 @@ class CleanManagerIntegration {
     async executeCompilerCommand(command, args, cwd) {
         try {
             const compilerPath = await this.getCompilerPath();
-            const fullCommand = `${compilerPath} ${command} ${args.join(' ')}`;
+            const fullCommand = `"${compilerPath}" ${command} ${args.map(arg => `"${arg}"`).join(' ')}`;
             const options = cwd ? { cwd } : {};
             const { stdout, stderr } = await execAsync(fullCommand, options);
             return { stdout, stderr };
@@ -292,7 +301,7 @@ class CleanManagerIntegration {
      */
     async getLanguageServerPath() {
         try {
-            // Since cleen manages the Clean compiler versions, 
+            // Since cleen manages the Clean compiler versions,
             // the language server should be available alongside the compiler
             // Try clean-language-server directly (should be in PATH via cleen)
             await execAsync('clean-language-server --version');
@@ -302,6 +311,12 @@ class CleanManagerIntegration {
             console.error('clean-language-server not available via cleen:', error);
             return undefined;
         }
+    }
+    /**
+     * Invalidate detection cache (useful after configuration changes)
+     */
+    invalidateDetectionCache() {
+        this.detector.invalidateCache();
     }
 }
 exports.CleanManagerIntegration = CleanManagerIntegration;

@@ -1,0 +1,260 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Clean HTML",
+  "scopeName": "text.html.clean",
+  "patterns": [
+    { "include": "#clean-comments" },
+    { "include": "#raw-interpolation" },
+    { "include": "#interpolation" },
+    { "include": "#doctype" },
+    { "include": "#tags" },
+    { "include": "text.html.basic" }
+  ],
+  "repository": {
+    "clean-comments": {
+      "patterns": [
+        {
+          "name": "comment.block.clean-html",
+          "begin": "\\{\\{!--",
+          "end": "--\\}\\}",
+          "captures": {
+            "0": { "name": "punctuation.definition.comment.clean-html" }
+          }
+        },
+        {
+          "name": "comment.block.html",
+          "begin": "<!--",
+          "end": "-->",
+          "captures": {
+            "0": { "name": "punctuation.definition.comment.html" }
+          }
+        }
+      ]
+    },
+    "raw-interpolation": {
+      "name": "meta.embedded.raw.clean",
+      "begin": "\\{\\{\\{",
+      "end": "\\}\\}\\}",
+      "beginCaptures": {
+        "0": { "name": "punctuation.definition.template-expression.begin.clean" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.template-expression.end.clean" }
+      },
+      "patterns": [
+        { "include": "source.clean" }
+      ]
+    },
+    "interpolation": {
+      "name": "meta.embedded.expression.clean",
+      "begin": "\\{\\{",
+      "end": "\\}\\}",
+      "beginCaptures": {
+        "0": { "name": "punctuation.definition.template-expression.begin.clean" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.template-expression.end.clean" }
+      },
+      "patterns": [
+        { "include": "source.clean" }
+      ]
+    },
+    "doctype": {
+      "name": "meta.tag.sgml.doctype.html",
+      "begin": "(?i)(<!)(doctype)",
+      "end": ">",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.html" },
+        "2": { "name": "entity.name.tag.doctype.html" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.tag.html" }
+      },
+      "patterns": [
+        {
+          "name": "string.quoted.double.html",
+          "begin": "\"",
+          "end": "\""
+        },
+        {
+          "name": "entity.other.attribute-name.html",
+          "match": "[^\\s>]+"
+        }
+      ]
+    },
+    "tags": {
+      "patterns": [
+        { "include": "#self-closing-tag" },
+        { "include": "#opening-tag" },
+        { "include": "#closing-tag" }
+      ]
+    },
+    "self-closing-tag": {
+      "name": "meta.tag.self-closing.html",
+      "begin": "(<)([a-zA-Z][a-zA-Z0-9:-]*)(?=[^>]*/>)",
+      "end": "(/>)",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.html" },
+        "2": { "name": "entity.name.tag.html" }
+      },
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.tag.end.html" }
+      },
+      "patterns": [
+        { "include": "#tag-attributes" }
+      ]
+    },
+    "opening-tag": {
+      "name": "meta.tag.open.html",
+      "begin": "(<)([a-zA-Z][a-zA-Z0-9:-]*)",
+      "end": "(>)",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.html" },
+        "2": { "name": "entity.name.tag.html" }
+      },
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.tag.end.html" }
+      },
+      "patterns": [
+        { "include": "#tag-attributes" }
+      ]
+    },
+    "closing-tag": {
+      "name": "meta.tag.close.html",
+      "match": "(</)([a-zA-Z][a-zA-Z0-9:-]*)(>)",
+      "captures": {
+        "1": { "name": "punctuation.definition.tag.begin.html" },
+        "2": { "name": "entity.name.tag.html" },
+        "3": { "name": "punctuation.definition.tag.end.html" }
+      }
+    },
+    "tag-attributes": {
+      "patterns": [
+        { "include": "#clean-directive-attribute" },
+        { "include": "#clean-bind-attribute" },
+        { "include": "#clean-event-attribute" },
+        { "include": "#interpolation" },
+        { "include": "#standard-attribute" }
+      ]
+    },
+    "clean-directive-attribute": {
+      "patterns": [
+        {
+          "name": "meta.attribute.directive.clean",
+          "match": "\\b(@)(if|else|each|show|slot|client|validate)\\b",
+          "captures": {
+            "1": { "name": "punctuation.definition.directive.clean" },
+            "2": { "name": "keyword.control.directive.clean" }
+          }
+        },
+        {
+          "name": "meta.attribute.directive.clean",
+          "begin": "(@)(if|else|each|show|slot|client|validate)(=)(\")",
+          "end": "(\")",
+          "beginCaptures": {
+            "1": { "name": "punctuation.definition.directive.clean" },
+            "2": { "name": "keyword.control.directive.clean" },
+            "3": { "name": "punctuation.separator.key-value.html" },
+            "4": { "name": "punctuation.definition.string.begin.html" }
+          },
+          "endCaptures": {
+            "1": { "name": "punctuation.definition.string.end.html" }
+          },
+          "patterns": [
+            { "include": "source.clean" }
+          ]
+        }
+      ]
+    },
+    "clean-bind-attribute": {
+      "patterns": [
+        {
+          "name": "meta.attribute.bind.clean",
+          "begin": "(:)([a-zA-Z][a-zA-Z0-9_-]*)(=)(\")",
+          "end": "(\")",
+          "beginCaptures": {
+            "1": { "name": "punctuation.definition.bind.clean" },
+            "2": { "name": "entity.other.attribute-name.bind.clean" },
+            "3": { "name": "punctuation.separator.key-value.html" },
+            "4": { "name": "punctuation.definition.string.begin.html" }
+          },
+          "endCaptures": {
+            "1": { "name": "punctuation.definition.string.end.html" }
+          },
+          "patterns": [
+            { "include": "source.clean" }
+          ]
+        }
+      ]
+    },
+    "clean-event-attribute": {
+      "patterns": [
+        {
+          "name": "meta.attribute.event.clean",
+          "begin": "(@)(on[a-zA-Z]+)(=)(\")",
+          "end": "(\")",
+          "beginCaptures": {
+            "1": { "name": "punctuation.definition.event.clean" },
+            "2": { "name": "entity.other.attribute-name.event.clean" },
+            "3": { "name": "punctuation.separator.key-value.html" },
+            "4": { "name": "punctuation.definition.string.begin.html" }
+          },
+          "endCaptures": {
+            "1": { "name": "punctuation.definition.string.end.html" }
+          },
+          "patterns": [
+            { "include": "source.clean" }
+          ]
+        }
+      ]
+    },
+    "standard-attribute": {
+      "patterns": [
+        {
+          "name": "meta.attribute.html",
+          "begin": "([a-zA-Z][a-zA-Z0-9_:-]*)(=)(\")",
+          "end": "(\")",
+          "beginCaptures": {
+            "1": { "name": "entity.other.attribute-name.html" },
+            "2": { "name": "punctuation.separator.key-value.html" },
+            "3": { "name": "punctuation.definition.string.begin.html" }
+          },
+          "endCaptures": {
+            "1": { "name": "punctuation.definition.string.end.html" }
+          },
+          "patterns": [
+            { "include": "#interpolation" },
+            {
+              "name": "string.quoted.double.html",
+              "match": "[^\"\\{]+"
+            }
+          ]
+        },
+        {
+          "name": "meta.attribute.html",
+          "begin": "([a-zA-Z][a-zA-Z0-9_:-]*)(=)(')",
+          "end": "(')",
+          "beginCaptures": {
+            "1": { "name": "entity.other.attribute-name.html" },
+            "2": { "name": "punctuation.separator.key-value.html" },
+            "3": { "name": "punctuation.definition.string.begin.html" }
+          },
+          "endCaptures": {
+            "1": { "name": "punctuation.definition.string.end.html" }
+          },
+          "patterns": [
+            { "include": "#interpolation" },
+            {
+              "name": "string.quoted.single.html",
+              "match": "[^'\\{]+"
+            }
+          ]
+        },
+        {
+          "name": "entity.other.attribute-name.html",
+          "match": "[a-zA-Z][a-zA-Z0-9_:-]*"
+        }
+      ]
+    }
+  }
+}

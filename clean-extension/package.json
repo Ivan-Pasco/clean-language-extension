@@ -1,8 +1,8 @@
 {
   "name": "clean-language",
   "displayName": "Clean Language",
-  "description": "Official Clean Language extension with LSP support, cleen - the Clean Language Manager integration, syntax highlighting, autocompletion, and tab enforcement",
-  "version": "1.2.3",
+  "description": "Official Clean Language extension with Frame Framework support, LSP, plugin architecture, CLI integration, syntax highlighting, and autocompletion",
+  "version": "2.0.0",
   "publisher": "IvanPasco",
   "author": "Ivan Pasco",
   "license": "MIT",
@@ -31,10 +31,19 @@
     "lsp",
     "autocompletion",
     "tabs",
-    "ivan-pasco"
+    "ivan-pasco",
+    "frame-framework",
+    "plugins",
+    "web-framework",
+    "fullstack",
+    "data-models",
+    "endpoints",
+    "components",
+    "canvas-games"
   ],
   "activationEvents": [
-    "onLanguage:clean"
+    "onLanguage:clean",
+    "onLanguage:clean-html"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -50,6 +59,17 @@
           "clean"
         ],
         "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "clean-html",
+        "extensions": [
+          ".html.cln"
+        ],
+        "aliases": [
+          "Clean HTML",
+          "clean-html"
+        ],
+        "configuration": "./language-configuration.json"
       }
     ],
     "configurationDefaults": {
@@ -61,6 +81,14 @@
         "files.trimTrailingWhitespace": true,
         "files.insertFinalNewline": true,
         "editor.renderWhitespace": "boundary"
+      },
+      "[clean-html]": {
+        "editor.insertSpaces": false,
+        "editor.tabSize": 4,
+        "editor.detectIndentation": false,
+        "editor.useTabStops": true,
+        "files.trimTrailingWhitespace": true,
+        "files.insertFinalNewline": true
       }
     },
     "grammars": [
@@ -68,11 +96,23 @@
         "language": "clean",
         "scopeName": "source.clean",
         "path": "./syntaxes/clean.tmLanguage.json"
+      },
+      {
+        "language": "clean-html",
+        "scopeName": "text.html.clean",
+        "path": "./syntaxes/clean-html.tmLanguage.json",
+        "embeddedLanguages": {
+          "source.clean": "clean"
+        }
       }
     ],
     "snippets": [
       {
         "language": "clean",
+        "path": "./snippets/clean.code-snippets"
+      },
+      {
+        "language": "clean-html",
         "path": "./snippets/clean.code-snippets"
       }
     ],
@@ -112,6 +152,132 @@
         "title": "$(info) Show Version Info",
         "category": "Clean Language",
         "icon": "$(info)"
+      },
+      {
+        "command": "clean.refreshCompileOptions",
+        "title": "$(refresh) Refresh Compile Options",
+        "category": "Clean Language",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "clean.setupCleen",
+        "title": "$(tools) Setup Clean Language Manager",
+        "category": "Clean Language",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "clean.detectCleen",
+        "title": "$(search) Detect cleen Installation",
+        "category": "Clean Language",
+        "icon": "$(search)"
+      },
+      {
+        "command": "clean.checkInstallation",
+        "title": "$(checklist) Check Installation",
+        "category": "Clean Language",
+        "icon": "$(checklist)"
+      },
+      {
+        "command": "clean.createProject",
+        "title": "$(new-folder) Create New Project",
+        "category": "Clean Framework",
+        "icon": "$(new-folder)"
+      },
+      {
+        "command": "clean.addPlugin",
+        "title": "$(extensions) Add Plugin",
+        "category": "Clean Framework",
+        "icon": "$(extensions)"
+      },
+      {
+        "command": "clean.listPlugins",
+        "title": "$(list-unordered) List Plugins",
+        "category": "Clean Framework",
+        "icon": "$(list-unordered)"
+      },
+      {
+        "command": "clean.build",
+        "title": "$(package) Build Project",
+        "category": "Clean Framework",
+        "icon": "$(package)"
+      },
+      {
+        "command": "clean.buildWatch",
+        "title": "$(eye) Build Watch",
+        "category": "Clean Framework",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "clean.buildProduction",
+        "title": "$(rocket) Build Production",
+        "category": "Clean Framework",
+        "icon": "$(rocket)"
+      },
+      {
+        "command": "clean.startServer",
+        "title": "$(debug-start) Start Server",
+        "category": "Clean Framework",
+        "icon": "$(debug-start)"
+      },
+      {
+        "command": "clean.stopServer",
+        "title": "$(debug-stop) Stop Server",
+        "category": "Clean Framework",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "clean.restartServer",
+        "title": "$(debug-restart) Restart Server",
+        "category": "Clean Framework",
+        "icon": "$(debug-restart)"
+      },
+      {
+        "command": "clean.dbMigrate",
+        "title": "$(database) Database Migrate",
+        "category": "Clean Framework",
+        "icon": "$(database)"
+      },
+      {
+        "command": "clean.dbSeed",
+        "title": "$(cloud-upload) Database Seed",
+        "category": "Clean Framework",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "clean.dbReset",
+        "title": "$(warning) Database Reset",
+        "category": "Clean Framework",
+        "icon": "$(warning)"
+      },
+      {
+        "command": "clean.generateModel",
+        "title": "$(symbol-class) Generate Model",
+        "category": "Clean Framework",
+        "icon": "$(symbol-class)"
+      },
+      {
+        "command": "clean.generateEndpoint",
+        "title": "$(symbol-method) Generate Endpoint",
+        "category": "Clean Framework",
+        "icon": "$(symbol-method)"
+      },
+      {
+        "command": "clean.generateComponent",
+        "title": "$(symbol-structure) Generate Component",
+        "category": "Clean Framework",
+        "icon": "$(symbol-structure)"
+      },
+      {
+        "command": "clean.generatePage",
+        "title": "$(file-code) Generate Page",
+        "category": "Clean Framework",
+        "icon": "$(file-code)"
+      },
+      {
+        "command": "clean.generateScene",
+        "title": "$(device-camera) Generate Scene",
+        "category": "Clean Framework",
+        "icon": "$(device-camera)"
       }
     ],
     "menus": {
@@ -183,9 +349,100 @@
         {
           "command": "clean.showVersionInfo",
           "when": "true"
+        },
+        {
+          "command": "clean.refreshCompileOptions",
+          "when": "true"
+        },
+        {
+          "command": "clean.createProject",
+          "when": "true"
+        },
+        {
+          "command": "clean.addPlugin",
+          "when": "true"
+        },
+        {
+          "command": "clean.listPlugins",
+          "when": "true"
+        },
+        {
+          "command": "clean.build",
+          "when": "true"
+        },
+        {
+          "command": "clean.buildWatch",
+          "when": "true"
+        },
+        {
+          "command": "clean.buildProduction",
+          "when": "true"
+        },
+        {
+          "command": "clean.startServer",
+          "when": "true"
+        },
+        {
+          "command": "clean.stopServer",
+          "when": "true"
+        },
+        {
+          "command": "clean.restartServer",
+          "when": "true"
+        },
+        {
+          "command": "clean.dbMigrate",
+          "when": "true"
+        },
+        {
+          "command": "clean.dbSeed",
+          "when": "true"
+        },
+        {
+          "command": "clean.dbReset",
+          "when": "true"
+        },
+        {
+          "command": "clean.generateModel",
+          "when": "true"
+        },
+        {
+          "command": "clean.generateEndpoint",
+          "when": "true"
+        },
+        {
+          "command": "clean.generateComponent",
+          "when": "true"
+        },
+        {
+          "command": "clean.generatePage",
+          "when": "true"
+        },
+        {
+          "command": "clean.generateScene",
+          "when": "true"
         }
       ]
     },
+    "keybindings": [
+      {
+        "command": "clean.build",
+        "key": "ctrl+shift+b",
+        "mac": "cmd+shift+b",
+        "when": "editorLangId == clean || editorLangId == clean-html"
+      },
+      {
+        "command": "clean.startServer",
+        "key": "ctrl+shift+s",
+        "mac": "cmd+shift+s",
+        "when": "editorLangId == clean || editorLangId == clean-html"
+      },
+      {
+        "command": "clean.runFile",
+        "key": "f5",
+        "when": "editorLangId == clean && !inDebugMode"
+      }
+    ],
     "configuration": {
       "type": "object",
       "title": "Clean Language",
@@ -203,7 +460,17 @@
         "clean.manager.path": {
           "type": "string",
           "default": "cleen",
-          "description": "Path to the cleen - the Clean Language Manager executable"
+          "description": "Path to the cleen - the Clean Language Manager executable (auto-detected if left as 'cleen')"
+        },
+        "clean.manager.autoDetect": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically detect cleen installation on activation"
+        },
+        "clean.manager.autoRefreshOnVersionChange": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically refresh compile options when Clean Language version changes"
         },
         "clean.compiler.path": {
           "type": "string",
@@ -219,6 +486,36 @@
           "type": "boolean",
           "default": false,
           "description": "Enable debug logging for the Language Server"
+        },
+        "clean.compiler.optionsPath": {
+          "type": "string",
+          "default": "",
+          "description": "Custom path to compile-options.json file (optional, auto-detected if not set)"
+        },
+        "clean.compiler.autoRefreshOptions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically refresh compile options when compiler is updated"
+        },
+        "clean.plugins.autoLoad": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically load plugins from app.cln when workspace opens"
+        },
+        "clean.plugins.globalPath": {
+          "type": "string",
+          "default": "~/.clean/plugins",
+          "description": "Global path for Clean Framework plugins"
+        },
+        "clean.server.port": {
+          "type": "number",
+          "default": 3000,
+          "description": "Default port for the Clean Framework development server"
+        },
+        "clean.server.autoStart": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically start the development server when workspace opens"
         }
       }
     }

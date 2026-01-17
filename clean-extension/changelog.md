@@ -5,6 +5,165 @@ All notable changes to the Clean Language extension will be documented in this f
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2025-01-17
+
+### Added
+
+#### Frame Framework Plugin Architecture
+- **Dynamic Plugin Loading** - Automatically loads plugins from `plugins:` block in `app.cln`
+  - Parses `plugin.toml` manifests from project `plugins/` folder
+  - Falls back to global plugins at `~/.clean/plugins/`
+  - Watches `app.cln` for changes and reloads plugins automatically
+- **Plugin-based Completions** - IDE completions from plugin language definitions
+  - Blocks, keywords, types, and functions from plugins
+  - Hover documentation for plugin-provided symbols
+- **Plugin Status Bar** - Shows loaded plugin count with tooltip listing plugin names
+
+#### CLI Integration (cln commands)
+- **Project Commands**
+  - `Create New Project` - Initialize new Clean Framework project with templates
+  - `Add Plugin` - Add plugins to project
+  - `List Plugins` - View installed plugins
+- **Build Commands**
+  - `Build Project` - Run `cln build`
+  - `Build Watch` - Run `cln build --watch` in terminal
+  - `Build Production` - Run `cln build --production`
+- **Server Commands**
+  - `Start Server` - Start development server (`cln serve`)
+  - `Stop Server` - Stop running server
+  - `Restart Server` - Restart development server
+- **Database Commands**
+  - `Database Migrate` - Run migrations
+  - `Database Seed` - Seed database
+  - `Database Reset` - Reset database (with confirmation)
+- **Generate Commands**
+  - `Generate Model` - Create data model
+  - `Generate Endpoint` - Create API endpoint
+  - `Generate Component` - Create UI component
+  - `Generate Page` - Create page
+  - `Generate Scene` - Create canvas scene
+
+#### New Syntax Highlighting
+- **Framework Blocks** - `plugins:`, `import:`, `data`, `endpoints:`, `server:`, `component`, `screen`, `page`, `styles:`, `auth:`, `protected:`, `canvasScene`
+- **Sub-block Keywords** - `where:`, `order:`, `limit:`, `guard:`, `render:`, `state:`, `props:`, `handlers:`, `computed:`, `jwt:`, `init:`, `update:`, `assets:`
+- **HTTP Methods** - `GET`, `POST`, `PUT`, `PATCH`, `DELETE` with URL path highlighting
+- **Framework Functions** - `json()`, `html()`, `redirect()`, `notFound()`, `error()`, `hashPassword()`, `verifyPassword()`, etc.
+- **Framework Classes** - `Data`, `Auth`, `req`, `res`, `canvas`, `sprite`, `audio`, `input`, `collision`, `camera`, `ease`, `db`
+
+#### HTML+Clean Hybrid Templates
+- **New File Type** - `.html.cln` files for HTML templates with Clean expressions
+- **Template Interpolation** - `{{expression}}` and `{{{rawExpression}}}` syntax
+- **Directive Attributes** - `@if`, `@else`, `@each`, `@show`, `@slot`, `@client`, `@validate`
+- **Bind Attributes** - `:attribute="expression"` syntax
+- **Event Handlers** - `@onclick`, `@onsubmit`, etc.
+
+#### Framework Snippets (20 new)
+- `plugins` - Plugins declaration block
+- `import` - Import block declaration
+- `data` - Data model definition
+- `get`, `post`, `put`, `delete` - HTTP endpoint templates
+- `endpoints` - Endpoints block
+- `component` - UI component with props/render
+- `page` - Page definition
+- `screen` - Screen with state/render/handlers
+- `auth` - Auth configuration
+- `protected` - Protected block with roles
+- `find`, `insert` - Data operations
+- `transaction` - Database transaction
+- `guard` - Endpoint guard
+- `canvasScene` - Canvas scene for games
+- `styles` - Styles definition
+- `server` - Server configuration
+
+#### Status Bar Enhancements
+- **Server Status Indicator** - Shows server state (stopped/starting/running/stopping/error) with port
+- **Build Button** - Quick access to build command on .cln files
+- **Plugin Context** - Shows loaded plugin count with names tooltip
+
+#### Keybindings
+- `Cmd+Shift+B` / `Ctrl+Shift+B` - Build project
+- `Cmd+Shift+S` / `Ctrl+Shift+S` - Start server
+- `F5` - Run current file
+
+### Changed
+- **Major Version Bump** - v2.0.0 for significant Frame Framework additions
+- **Description Updated** - Now mentions Frame Framework, plugin architecture, CLI integration
+- **Keywords Extended** - Added frame-framework, plugins, web-framework, fullstack, data-models, endpoints, components, canvas-games
+- **Activation Events** - Now activates on both `clean` and `clean-html` languages
+
+### Configuration
+- `clean.plugins.autoLoad` - Auto-load plugins from app.cln (default: true)
+- `clean.plugins.globalPath` - Global plugins path (default: ~/.clean/plugins)
+- `clean.server.port` - Development server port (default: 3000)
+- `clean.server.autoStart` - Auto-start server on workspace open (default: false)
+
+### Technical
+- Created `src/types/plugin-types.ts` for plugin type definitions
+- Created `src/services/plugin-loader.ts` for dynamic plugin loading
+- Created `src/services/cli-integration.ts` for CLI command integration
+- Created `syntaxes/clean-html.tmLanguage.json` for HTML+Clean hybrid syntax
+- Updated `src/extension.ts` with new services and 17 new commands
+- Updated `src/statusbar.ts` with server and plugin status indicators
+- Updated `syntaxes/clean.tmLanguage.json` with framework patterns
+- Updated `snippets/clean.code-snippets` with 20 framework snippets
+
+## [1.3.1] - 2025-10-08
+
+### Fixed
+- **Refresh Compile Options Command** - Fixed refresh command that was calling non-existent `cleen options --export-json`
+  - Now properly clears cache and reloads from disk
+  - Works with existing compile-options.json files in `~/.cleen/versions/`
+
+### Changed
+- **Extension Icon** - Added new clean, simple icon design
+  - Blue rounded background with white "C" letter
+  - Sparkle accents for "clean" concept
+  - 128x128 optimized PNG
+
+## [1.3.0] - 2025-10-05
+
+### Added
+- **Dynamic Compile Options** - Compile options are now loaded dynamically from the Clean Language compiler
+  - Options automatically match the capabilities of your installed compiler version
+  - Each compiler version (v0.8.5+) includes its own `compile-options.json` file
+  - Extension reads options from `~/.cleen/versions/{version}/compile-options.json`
+  - Future-proof: new compiler options appear automatically without extension updates
+  - Graceful fallback to defaults if JSON unavailable
+- **Refresh Compile Options Command** - Manually reload compile options from compiler
+  - Command: "Clean Language: Refresh Compile Options"
+  - Useful after compiler updates or version switches
+- **Version-Aware Options** - Different compiler versions can have different available options
+  - Options are tied to specific compiler versions
+  - Switching compiler versions updates available options automatically
+- **Improved Option Discovery** - Multi-path search for compile options
+  - Checks active version from cleen config first
+  - Falls back to all installed versions if needed
+  - Supports custom paths via settings
+
+### Changed
+- **Compile Options Dialog** - Now displays options from compiler instead of hardcoded values
+  - Targets, optimizations, runtimes, flags, and presets are all dynamic
+  - Labels and descriptions come from compiler-generated JSON
+  - Better integration with compiler evolution
+- **Extension Architecture** - Added new services layer for dynamic options loading
+  - New `CompileOptionsLoader` service for managing options
+  - TypeScript type definitions for compile options schema
+  - Preloads options on activation for faster first use
+
+### Technical
+- Created `src/types/compile-options.ts` for TypeScript definitions
+- Created `src/services/compile-options-loader.ts` for dynamic loading logic
+- Updated `src/commands.ts` to use dynamic options loader
+- Updated `src/extension.ts` to preload options on activation
+- Added configuration option: `clean.compiler.optionsPath` for custom JSON paths
+- Integration with Clean Language compiler v0.8.5+ options export feature
+- Integration with Clean Manager extraction of compile-options.json from releases
+
+### Documentation
+- Added comprehensive testing guide in `TESTING-DYNAMIC-OPTIONS.md`
+- Added implementation summary in `DYNAMIC-OPTIONS-COMPLETE.md`
+- Added verification script: `verify-integration.js`
+
 ## [1.2.0] - 2025-08-21
 
 ### Added

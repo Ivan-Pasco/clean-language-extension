@@ -1,0 +1,496 @@
+{
+  "start_function": {
+    "prefix": "start",
+    "body": [
+      "start()",
+      "\t$0"
+    ],
+    "description": "Clean Language start function"
+  },
+  "function_definition": {
+    "prefix": "function",
+    "body": [
+      "function $1($2)",
+      "\t$0"
+    ],
+    "description": "Function definition"
+  },
+  "functions_block": {
+    "prefix": "functions",
+    "body": [
+      "functions:",
+      "\t$1 $2($3)",
+      "\t\t$0"
+    ],
+    "description": "Functions block with function definition"
+  },
+  "class_definition": {
+    "prefix": "class",
+    "body": [
+      "class $1",
+      "\t$2 $3",
+      "",
+      "\tconstructor($4)",
+      "",
+      "\tfunctions:",
+      "\t\t$5 $6($7)",
+      "\t\t\t$0"
+    ],
+    "description": "Class definition with constructor and methods"
+  },
+  "class_with_inheritance": {
+    "prefix": "classis",
+    "body": [
+      "class $1 is $2",
+      "\t$3 $4",
+      "",
+      "\tconstructor($5)",
+      "\t\tbase($6)",
+      "",
+      "\tfunctions:",
+      "\t\t$7 $8($9)",
+      "\t\t\t$0"
+    ],
+    "description": "Class definition with inheritance"
+  },
+  "constructor": {
+    "prefix": "constructor",
+    "body": [
+      "constructor($1)",
+      "\t$0"
+    ],
+    "description": "Constructor definition"
+  },
+  "test_block": {
+    "prefix": "tests",
+    "body": [
+      "tests:",
+      "\t\"$1\": $2 = $3",
+      "\t$0"
+    ],
+    "description": "Test block with named test"
+  },
+  "input_block": {
+    "prefix": "input",
+    "body": [
+      "input",
+      "\t$1 $2 = $3",
+      "\t$0"
+    ],
+    "description": "Function input block with parameter"
+  },
+  "if_statement": {
+    "prefix": "if",
+    "body": [
+      "if $1",
+      "\t$0"
+    ],
+    "description": "If statement"
+  },
+  "if_else_statement": {
+    "prefix": "ifelse",
+    "body": [
+      "if $1",
+      "\t$2",
+      "else",
+      "\t$0"
+    ],
+    "description": "If-else statement"
+  },
+  "iterate_statement": {
+    "prefix": "iterate",
+    "body": [
+      "iterate $1 in $2",
+      "\t$0"
+    ],
+    "description": "Iterate statement"
+  },
+  "while_loop": {
+    "prefix": "while",
+    "body": [
+      "while $1",
+      "\t$0"
+    ],
+    "description": "While loop"
+  },
+  "for_loop": {
+    "prefix": "for",
+    "body": [
+      "for $1 = $2 to $3",
+      "\t$0"
+    ],
+    "description": "For loop"
+  },
+  "for_loop_with_step": {
+    "prefix": "forstep",
+    "body": [
+      "for $1 = $2 to $3 step $4",
+      "\t$0"
+    ],
+    "description": "For loop with step"
+  },
+  "apply_block": {
+    "prefix": "apply",
+    "body": [
+      "$1:",
+      "\t$0"
+    ],
+    "description": "Apply block"
+  },
+  "print_apply": {
+    "prefix": "print",
+    "body": [
+      "print:",
+      "\t$0"
+    ],
+    "description": "Print apply block"
+  },
+  "println_apply": {
+    "prefix": "println",
+    "body": [
+      "println:",
+      "\t$0"
+    ],
+    "description": "Println apply block"
+  },
+  "variable_declaration": {
+    "prefix": "var",
+    "body": [
+      "$1 $2 = $0"
+    ],
+    "description": "Variable declaration"
+  },
+  "integer_declaration": {
+    "prefix": "int",
+    "body": [
+      "integer $1 = $0"
+    ],
+    "description": "Integer variable declaration"
+  },
+  "number_declaration": {
+    "prefix": "num",
+    "body": [
+      "number $1 = $0"
+    ],
+    "description": "Number variable declaration"
+  },
+  "string_declaration": {
+    "prefix": "str",
+    "body": [
+      "string $1 = \"$0\""
+    ],
+    "description": "String variable declaration"
+  },
+  "boolean_declaration": {
+    "prefix": "bool",
+    "body": [
+      "boolean $1 = $0"
+    ],
+    "description": "Boolean variable declaration"
+  },
+  "list_declaration": {
+    "prefix": "list",
+    "body": [
+      "list<$1> $2 = [$0]"
+    ],
+    "description": "List variable declaration"
+  },
+  "matrix_declaration": {
+    "prefix": "matrix",
+    "body": [
+      "matrix<$1> $2 = [[$0]]"
+    ],
+    "description": "Matrix variable declaration"
+  },
+  "error_statement": {
+    "prefix": "error",
+    "body": [
+      "error \"$0\""
+    ],
+    "description": "Error statement"
+  },
+  "onError_block": {
+    "prefix": "onError",
+    "body": [
+      "onError",
+      "\t$0"
+    ],
+    "description": "Error handling block"
+  },
+  "math_function": {
+    "prefix": "math",
+    "body": [
+      "Math.$1($0)"
+    ],
+    "description": "Math function call"
+  },
+  "string_function": {
+    "prefix": "string",
+    "body": [
+      "String.$1($0)"
+    ],
+    "description": "String function call"
+  },
+  "list_function": {
+    "prefix": "listfunc",
+    "body": [
+      "List.$1($0)"
+    ],
+    "description": "List function call"
+  },
+  "http_get": {
+    "prefix": "httpget",
+    "body": [
+      "Http.get(\"$1\")"
+    ],
+    "description": "HTTP GET request"
+  },
+  "http_post": {
+    "prefix": "httppost",
+    "body": [
+      "Http.post(\"$1\", $2)"
+    ],
+    "description": "HTTP POST request"
+  },
+  "file_read": {
+    "prefix": "fileread",
+    "body": [
+      "File.read(\"$1\")"
+    ],
+    "description": "File read operation"
+  },
+  "file_write": {
+    "prefix": "filewrite",
+    "body": [
+      "File.write(\"$1\", $2)"
+    ],
+    "description": "File write operation"
+  },
+
+  "framework_plugins": {
+    "prefix": "plugins",
+    "body": [
+      "plugins:",
+      "\t$1"
+    ],
+    "description": "Frame Framework plugins declaration block"
+  },
+  "framework_import": {
+    "prefix": "import",
+    "body": [
+      "import:",
+      "\t\"$1\""
+    ],
+    "description": "Frame Framework import block"
+  },
+  "framework_data_model": {
+    "prefix": "data",
+    "body": [
+      "data $1:",
+      "\t$2 $3",
+      "\t$0"
+    ],
+    "description": "Frame Framework data model definition"
+  },
+  "framework_get_endpoint": {
+    "prefix": "get",
+    "body": [
+      "GET \"$1\":",
+      "\t$0",
+      "\treturn json($2)"
+    ],
+    "description": "Frame Framework GET endpoint"
+  },
+  "framework_post_endpoint": {
+    "prefix": "post",
+    "body": [
+      "POST \"$1\":",
+      "\t$2 = req.body",
+      "\t$0",
+      "\treturn json($3)"
+    ],
+    "description": "Frame Framework POST endpoint"
+  },
+  "framework_put_endpoint": {
+    "prefix": "put",
+    "body": [
+      "PUT \"$1\":",
+      "\t$2 = req.body",
+      "\t$0",
+      "\treturn json($3)"
+    ],
+    "description": "Frame Framework PUT endpoint"
+  },
+  "framework_delete_endpoint": {
+    "prefix": "delete",
+    "body": [
+      "DELETE \"$1\":",
+      "\t$0",
+      "\treturn json({ success: true })"
+    ],
+    "description": "Frame Framework DELETE endpoint"
+  },
+  "framework_endpoints": {
+    "prefix": "endpoints",
+    "body": [
+      "endpoints:",
+      "\tGET \"/$1\":",
+      "\t\treturn json($2)",
+      "",
+      "\tPOST \"/$1\":",
+      "\t\t$3 = req.body",
+      "\t\treturn json($4)"
+    ],
+    "description": "Frame Framework endpoints block with GET and POST"
+  },
+  "framework_component": {
+    "prefix": "component",
+    "body": [
+      "component $1:",
+      "\tprops:",
+      "\t\t$2 $3",
+      "",
+      "\trender:",
+      "\t\treturn html:",
+      "\t\t\t<div>",
+      "\t\t\t\t$0",
+      "\t\t\t</div>"
+    ],
+    "description": "Frame Framework UI component with props and render"
+  },
+  "framework_page": {
+    "prefix": "page",
+    "body": [
+      "page $1:",
+      "\ttemplate: \"$2\"",
+      "",
+      "\thandlers:",
+      "\t\tfunction onLoad()",
+      "\t\t\t$0"
+    ],
+    "description": "Frame Framework page definition"
+  },
+  "framework_screen": {
+    "prefix": "screen",
+    "body": [
+      "screen $1:",
+      "\tstate:",
+      "\t\t$2 $3 = $4",
+      "",
+      "\trender:",
+      "\t\treturn html:",
+      "\t\t\t<div>",
+      "\t\t\t\t$0",
+      "\t\t\t</div>",
+      "",
+      "\thandlers:",
+      "\t\tfunction handle$5()",
+      "\t\t\t$6"
+    ],
+    "description": "Frame Framework screen with state and render"
+  },
+  "framework_auth": {
+    "prefix": "auth",
+    "body": [
+      "auth:",
+      "\tjwt:",
+      "\t\tsecret: \"$1\"",
+      "\t\texpiresIn: \"$2\"",
+      "",
+      "\tlogin:",
+      "\t\tPOST \"/login\":",
+      "\t\t\t$3 = req.body",
+      "\t\t\t$0"
+    ],
+    "description": "Frame Framework auth configuration"
+  },
+  "framework_protected": {
+    "prefix": "protected",
+    "body": [
+      "protected:",
+      "\troles: [$1]",
+      "",
+      "\t$0"
+    ],
+    "description": "Frame Framework protected block with roles"
+  },
+  "framework_find": {
+    "prefix": "find",
+    "body": [
+      "Data.$1.find():",
+      "\twhere:",
+      "\t\t$2 = $3",
+      "\torder: $4",
+      "\tlimit: $5"
+    ],
+    "description": "Frame Framework Data find query"
+  },
+  "framework_insert": {
+    "prefix": "insert",
+    "body": [
+      "Data.$1.insert(",
+      "\t$2: $3,",
+      "\t$4: $5",
+      ")"
+    ],
+    "description": "Frame Framework Data insert operation"
+  },
+  "framework_transaction": {
+    "prefix": "transaction",
+    "body": [
+      "db.transaction():",
+      "\t$0",
+      "",
+      "\tonError:",
+      "\t\tdb.rollback()"
+    ],
+    "description": "Frame Framework database transaction"
+  },
+  "framework_guard": {
+    "prefix": "guard",
+    "body": [
+      "guard:",
+      "\tif not $1",
+      "\t\treturn error($2)"
+    ],
+    "description": "Frame Framework endpoint guard"
+  },
+  "framework_canvas_scene": {
+    "prefix": "canvasScene",
+    "body": [
+      "canvasScene $1:",
+      "\tinit:",
+      "\t\t$2",
+      "",
+      "\tupdate:",
+      "\t\t$3",
+      "",
+      "\tdraw:",
+      "\t\t$0"
+    ],
+    "description": "Frame Framework canvas scene for games"
+  },
+  "framework_styles": {
+    "prefix": "styles",
+    "body": [
+      "styles:",
+      "\t.$1:",
+      "\t\t$2: $3",
+      "\t\t$0"
+    ],
+    "description": "Frame Framework styles definition"
+  },
+  "framework_server": {
+    "prefix": "server",
+    "body": [
+      "server:",
+      "\tport: $1",
+      "\tmiddleware:",
+      "\t\t$2",
+      "\tcors:",
+      "\t\torigin: \"$3\"",
+      "\tstatic: \"$4\""
+    ],
+    "description": "Frame Framework server configuration"
+  }
+}
