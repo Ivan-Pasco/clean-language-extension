@@ -74,7 +74,7 @@ http.get_protected("/admin/dashboard", handler_func, "admin")
 
 ---
 
-## Request Context Functions (6 functions)
+## Request Context Functions (7 functions)
 
 These functions access the current HTTP request during handler execution.
 
@@ -169,6 +169,28 @@ Returns: Pointer to path string
 
 ---
 
+### `_req_cookie`
+
+Get a cookie value by name.
+
+```
+Signature: (name_ptr: i32, name_len: i32) -> i32
+Returns: Pointer to cookie value (empty if not found)
+```
+
+**Example (Clean Language):**
+```clean
+let session_id = request.cookie("session")
+let user_pref = request.cookie("theme")  // "dark" or "light"
+```
+
+**Notes:**
+- Cookie names are case-sensitive
+- Returns empty string if cookie not found
+- Parses cookies from the `Cookie` header
+
+---
+
 ## Session Authentication Functions (5 functions)
 
 These functions manage session-based authentication.
@@ -243,6 +265,69 @@ Returns: 1 if user has any role, 0 if not
 ```json
 ["admin", "editor", "moderator"]
 ```
+
+---
+
+## Response Manipulation Functions (2 functions)
+
+These functions allow handlers to control HTTP response headers and redirects.
+
+### `_res_set_header`
+
+Set a custom response header.
+
+```
+Signature: (name_ptr: i32, name_len: i32, value_ptr: i32, value_len: i32) -> i32
+Returns: 1 on success, 0 on error
+```
+
+**Example (Clean Language):**
+```clean
+// Set CORS headers
+response.setHeader("Access-Control-Allow-Origin", "*")
+response.setHeader("Cache-Control", "max-age=3600")
+```
+
+**Common Use Cases:**
+- CORS headers (`Access-Control-Allow-Origin`, `Access-Control-Allow-Methods`)
+- Cache control (`Cache-Control`, `ETag`, `Expires`)
+- Security headers (`X-Frame-Options`, `Content-Security-Policy`)
+- Custom content types (`Content-Type`)
+
+---
+
+### `_res_redirect`
+
+Send an HTTP redirect response.
+
+```
+Signature: (url_ptr: i32, url_len: i32, status_code: i32) -> i32
+Returns: 1 on success, 0 on error
+```
+
+**Status Codes:**
+- `301` - Moved Permanently (cacheable, may change method to GET)
+- `302` - Found (temporary, may change method to GET)
+- `303` - See Other (always use GET for redirect)
+- `307` - Temporary Redirect (preserves HTTP method)
+- `308` - Permanent Redirect (preserves HTTP method)
+
+**Example (Clean Language):**
+```clean
+// After successful login, redirect to dashboard
+response.redirect("/dashboard", 302)
+
+// Permanent redirect for SEO
+response.redirect("/new-page", 301)
+
+// Preserve POST method after form processing
+response.redirect("/result", 307)
+```
+
+**Notes:**
+- When a redirect is set, the handler's return value (body) is ignored
+- Cookies set via `_session_create` are still included in redirect responses
+- Custom headers set via `_res_set_header` are also included
 
 ---
 
