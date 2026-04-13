@@ -2,22 +2,74 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## MCP Server — Use It First
+
+**CRITICAL: Before writing ANY Clean Language code, call `get_quick_reference` from the clean-language MCP server.** This gives you the correct, up-to-date syntax. Do NOT write Clean code from memory — always verify against the MCP tools.
+
+Available MCP tools: `get_quick_reference`, `check`, `compile`, `parse`, `get_specification`, `list_functions`, `list_types`, `list_builtins`, `list_plugins`, `get_architecture`, `explain_error`
+
+The MCP server is configured in `.mcp.json`. Start it with: `cln mcp-server`
+
 ## Overview
 
 This is a Rust-based compiler for Clean Language, a type-safe programming language that compiles to WebAssembly. Clean Language combines JavaScript-like readability with Rust-like safety features.
 
 Language characteristics are described in the [Language Specification](./Language-Specification.md). if you find something that is not described in the specification, propose a change to the specification before implementing it. When something is added you need to update the specification.
 
+## Formal Specifications (`spec/`)
+
+The `spec/` directory contains the formal, machine-readable specifications that are the single source of truth for language correctness (Principles 2 and 3):
+
+- **[`spec/grammar.ebnf`](./spec/grammar.ebnf)** — Core language syntax in EBNF (authoritative)
+- **[`spec/semantic-rules.md`](./spec/semantic-rules.md)** — Numbered semantic rules (SYN, SEM, SCOPE, FUNC, CLASS, etc.)
+- **[`spec/type-system.md`](./spec/type-system.md)** — Type hierarchy, compatibility matrix, conversions
+- **[`spec/stdlib-reference.md`](./spec/stdlib-reference.md)** — 287 built-in functions across 14 categories
+- **[`spec/plugins/`](./spec/plugins/)** — Plugin grammar extensions:
+  - `frame-server.ebnf` — endpoints, routing, request/response
+  - `frame-data.ebnf` — ORM models, queries, migrations
+  - `frame-ui.ebnf` — components, HTML directives, styles
+  - `frame-auth.ebnf` — sessions, JWT, roles, CSRF
+  - `frame-canvas.ebnf` — canvas scenes, drawing, audio, input
+
+When writing tests, cite the relevant `grammar.ebnf` production rule. When resolving ambiguity, `grammar.ebnf` takes precedence over prose documentation.
+
+**Spec-Implementation Parity (Principle 24):** Everything in the spec must be implemented. Everything implemented must be in the spec. No exceptions.
+
+**Specification Change Control (Principle 25):** NEVER modify spec files without developer approval. If you find a gap between spec and implementation, report it and ask the developer for a decision. You CAN fix compiler bugs to match the spec. You CANNOT add unauthorized syntax to the compiler.
+
 ## Platform Architecture
+
+**CRITICAL: Before implementing ANY function, read the Execution Layers specification.**
 
 The runtime platform architecture is documented in [platform-architecture/](./platform-architecture/README.md). This includes:
 
-- **[Host Bridge Specification](./platform-architecture/HOST_BRIDGE.md)** - All portable host functions (console, math, string, database, file I/O, HTTP client, crypto)
+- **[⚠️ EXECUTION LAYERS](./platform-architecture/EXECUTION_LAYERS.md)** - **READ FIRST: Authoritative definition of which layer executes which functions**
+- **[⚠️ IDE EXTENSION ARCHITECTURE](./platform-architecture/IDE_EXTENSION_ARCHITECTURE.md)** - **Language Server is single source of truth for ALL IDE intelligence**
+- **[Host Bridge Specification](./platform-architecture/HOST_BRIDGE.md)** - Layer 2: Portable host functions (console, math, string, database, file I/O, HTTP client, crypto)
 - **[Memory Model](./platform-architecture/MEMORY_MODEL.md)** - WASM memory layout, string format, bump allocator
-- **[Server Extensions](./platform-architecture/SERVER_EXTENSIONS.md)** - HTTP server-specific functions (routing, request context, auth)
+- **[Server Extensions](./platform-architecture/SERVER_EXTENSIONS.md)** - Layer 3: HTTP server-specific functions (routing, request context, auth)
 - **[Implementing a New Host](./platform-architecture/IMPLEMENTING_HOST.md)** - Guide for building new runtime implementations
 
-When modifying host functions or adding new ones, always update the platform architecture documentation.
+### Language Server Responsibility
+
+**CRITICAL:** The language server (included in this compiler) is the **single source of truth** for all IDE language intelligence. The VS Code extension is a thin client — it does NOT hardcode keywords, types, or framework blocks. All syntax highlighting (via semantic tokens), completions, hover, and diagnostics MUST come from the language server. See [IDE Extension Architecture](./platform-architecture/IDE_EXTENSION_ARCHITECTURE.md) for full specification.
+
+### Execution Layer Summary
+
+| Layer | Component | Responsibility |
+|-------|-----------|----------------|
+| **Layer 0** | Compiler | Parse, analyze, generate WASM imports (NOT implementations) |
+| **Layer 1** | WASM Runtime | Pure computation (math intrinsics, memory ops) |
+| **Layer 2** | Host Bridge | Portable I/O (console, file, HTTP client, DB, crypto) |
+| **Layer 3** | Server Extensions | Server-only (HTTP routing, request context, sessions) |
+| **Layer 4** | Plugins | Custom bridge functions via plugin.toml |
+| **Layer 5** | Framework/Apps | High-level abstractions |
+
+**Rule:** If a function needs external I/O, it belongs in Layer 2+, NOT in the compiler.
+
+When modifying host functions or adding new ones, always:
+1. Check EXECUTION_LAYERS.md for correct placement
+2. Update the platform architecture documentation
 
 ## Common Commands
 
@@ -195,3 +247,79 @@ When implementing new features:
 - our goal is to reach 100% accuracy on the whole compile and excecution  process. There should be no errors, we wont stop until reaching it. The process should include the testing of all files in the tests folder
 - all test files should be inside tests/cln folder inside a logical  category, all the tests compiled from tests/cln folder should be compiled to tests/output folder. before creating a new test file read the tests in the category to verify if there is already a test for it, and if you need to create a new one save it in the same folder.
 - for research about rust compilers or pest parser use context7
+
+## COMITA — see ~/.claude/CLAUDE.md
+
+The "comita" workflow is defined in the global CLAUDE.md. Do not duplicate it here.
+
+## Architecture Boundaries
+
+**CRITICAL: Read `management/ARCHITECTURE_BOUNDARIES.md` before implementing ANY new functionality in ANY component.**
+
+This document defines what each component IS and IS NOT responsible for. It includes a boundary violation detection checklist and delegation patterns. Every component's CLAUDE.md must reference it.
+
+Key boundary principle: **Each component has a single responsibility. If a function doesn't match that responsibility, it belongs in a different component.**
+
+## Cross-Component Work Policy
+
+**CRITICAL: AI Instance Separation of Concerns**
+
+The Clean Language project is organized into multiple components, each in its own folder. When an AI instance is working in one component and discovers errors, bugs, or required changes in **another component** (different folder), it must **NOT** directly fix or modify code in that other component.
+
+### Project Components
+
+| Component | Folder | Purpose |
+|-----------|--------|---------|
+| Compiler | `clean-language-compiler/` | Clean Language to WASM compiler |
+| Framework | `clean-framework/` | Frame full-stack framework |
+| Manager | `clean-manager/` | Version manager for Clean Language |
+| Extension | `clean-extension/` | VS Code/Cursor extension |
+| Server | `clean-server/` | Runtime server |
+| Node Server | `clean-node-server/` | Node.js runtime |
+| UI | `clean-ui/` | UI components |
+| Canvas | `clean-canvas/` | Canvas rendering |
+| LLM | `clean-llm/` | LLM integration |
+| MCP | `Clean MCP/` | Model Context Protocol |
+| cPanel Plugin | `clean-cpanel-plugin/` | cPanel hosting plugin |
+
+### Cross-Component Issue Process
+
+Instead of directly modifying another component:
+
+1. **Document the issue** by creating a prompt/task description
+2. **Save the prompt** in `management/cross-component-prompts/`
+3. **The prompt will be executed** by the AI instance working in the correct folder
+
+### Prompt Format for Cross-Component Issues
+
+```
+Component: [target component name]
+Issue Type: [bug/feature/enhancement/compatibility]
+Priority: [critical/high/medium/low]
+Description: [Detailed description of the issue discovered]
+Context: [Why this was discovered while working in the current component]
+Suggested Fix: [If known, describe the potential solution]
+Files Affected: [List of files in the target component that need changes]
+```
+
+### Why This Rule Exists
+
+- Each component has its own context, dependencies, and testing requirements
+- AI instances are optimized for their specific component's codebase
+- Cross-component changes without proper context can introduce bugs
+- This maintains clear boundaries and accountability
+- Ensures changes are properly tested in the target component's environment
+
+### What You CAN Do
+
+- Read files from other components to understand interfaces
+- Document compatibility issues found
+- Create detailed prompts for the correct AI instance
+- Update your component to work with existing interfaces
+
+### What You MUST NOT Do
+
+- Directly edit code in other components
+- Make changes to other components' configuration files
+- Modify shared resources without coordination
+- Skip the prompt creation step for cross-component issues

@@ -1,0 +1,869 @@
+(* ============================================================================ *)
+(* Clean Language Grammar — EBNF Specification                                *)
+(* Version: 1.0.0                                                            *)
+(* Date: 2026-04-12                                                          *)
+(* Authority: This file is the single source of truth for Clean Language      *)
+(*            syntax (Principle 2). The compiler's grammar.pest is an         *)
+(*            implementation of this spec. If they diverge, grammar.pest      *)
+(*            is wrong.                                                       *)
+(* Source: Translated from grammar.pest (PEG) + Clean_Language_Specification  *)
+(* ============================================================================ *)
+
+
+(* ======================================================================== *)
+(* 1. LEXICAL STRUCTURE                                                     *)
+(* ======================================================================== *)
+
+(* --- 1.1 Whitespace and Indentation --- *)
+
+INDENT          = TAB ;
+NEWLINE         = LF | CR , LF ;
+WHITESPACE      = SPACE | CR ;
+empty_line      = { INDENT } , NEWLINE ;
+comment         = ( "#" | "//" ) , { ANY - NEWLINE }
+                | "/*" , { ANY - "*/" } , "*/" ;
+
+(* Clean Language uses TABS ONLY for indentation.
+   Spaces are not valid indentation characters.
+   Spaces are permitted within expressions for readability. *)
+
+
+(* --- 1.2 Keywords --- *)
+
+keyword         = ( "return" | "if" | "else" | "then" | "iterate" | "in"
+                  | "to" | "step" | "tests" | "error" | "function"
+                  | "functions" | "input" | "description" | "class"
+                  | "constructor" | "is" | "and" | "or" | "not" | "true"
+                  | "false" | "null" | "default" | "onError" | "constant"
+                  | "private" | "base" | "list" | "matrix" | "pairs"
+                  | "integer" | "number" | "boolean" | "string" | "void"
+                  | "any" | "import" | "from" | "as" | "later"
+                  | "background" | "start" | "print" | "break" | "continue"
+                  | "while" | "state" | "watch" | "computed" | "screen"
+                  | "guard" | "reset" | "require" | "rules" | "spec"
+                  | "intent" | "source" | "build" )
+                  , NOT ( ALPHANUMERIC | "_" ) ;
+
+(* Keywords are reserved only when not followed by an alphanumeric or
+   underscore character. This allows identifiers like "toString". *)
+
+
+(* --- 1.3 Identifiers --- *)
+
+identifier      = NOT keyword
+                , ( ALPHA | "_" )
+                , { ALPHANUMERIC | "_" } ;
+
+class_name      = UPPER_ALPHA , { ALPHANUMERIC | "_" } ;
+
+function_name   = lowercase_identifier
+                | "start" | "stop" | "toString" | "input" | "error"
+                | "test" | "from" | "to" | "step" ;
+
+lowercase_identifier
+                = NOT keyword
+                , ( LOWER_ALPHA | "_" )
+                , { ALPHANUMERIC | "_" } ;
+
+variable_name   = identifier ;
+
+parameter_name  = NOT critical_keyword
+                , ALPHA , { ALPHANUMERIC | "_" }
+                | "base" ;
+
+module_name     = ALPHA , { ALPHANUMERIC | "_" }
+                | "string" | "integer" | "number" | "boolean"
+                | "list" | "matrix" | "void" | "any" ;
+
+method_name     = identifier
+                | "greaterThan" | "lessThan" | "equal"
+                | "greaterEqual" | "lessEqual" | "number"
+                | "integer" | "boolean" | "string" | "length"
+                | "isDefined" | "isNotDefined" | "isEmpty"
+                | "isNotEmpty" | "mustBeTrue" | "mustBeFalse"
+                | "mustBeEqual" | "mustNotBeEqual" | "toString"
+                | "toInteger" | "toNumber" | "toBoolean"
+                | "keepBetween" | "yesNo" | "prompt"
+                | "and" | "or" | "not" | "start" | "stop" ;
+
+namespace_identifier
+                = identifier ;
+
+static_class_name
+                = static_class_identifier
+                , { "." , static_class_identifier } ;
+
+static_class_identifier
+                = "StringUtils" | "Math" | "String" | "List" | "File"
+                | "Http" | "Console" | "conditional" | "compare"
+                | "logical" | "math" | "string" | "list" | "file"
+                | "http" | "console" | "number" | "integer" | "boolean" ;
+
+builtin_class_name
+                = "list" | "file" | "http" | "math" | "input"
+                | "logical" | "conditional" | "compare"
+                | "Math" | "String" | "List" | "File" | "Http"
+                | "Console" ;
+
+
+(* --- 1.4 Numeric Literals --- *)
+
+decimal_integer = [ "-" ] , DIGIT , { DIGIT } ;
+hex_integer     = [ "-" ] , "0" , ( "x" | "X" ) , HEX_DIGIT , { HEX_DIGIT } ;
+binary_integer  = [ "-" ] , "0" , ( "b" | "B" ) , BIN_DIGIT , { BIN_DIGIT } ;
+octal_integer   = [ "-" ] , "0" , ( "o" | "O" ) , OCT_DIGIT , { OCT_DIGIT } ;
+integer_literal = hex_integer | binary_integer | octal_integer | decimal_integer ;
+
+float_literal   = [ "-" ] , DIGIT , { DIGIT }
+                , ( ( "." , DIGIT , { DIGIT }
+                    , [ ( "e" | "E" ) , [ "+" | "-" ] , DIGIT , { DIGIT } ] )
+                  | ( ( "e" | "E" ) , [ "+" | "-" ] , DIGIT , { DIGIT } ) ) ;
+
+number_literal  = float_literal | integer_literal ;
+
+
+(* --- 1.5 Boolean and Null Literals --- *)
+
+boolean_literal = "true" | "false" ;
+null_literal    = "null" ;
+
+
+(* --- 1.6 String Literals --- *)
+
+string_content  = { ANY - ( '"' | "\\" ) } ;
+escaped_char    = "\\" , ( '"' | "{" | "}" | "\\" | "n" | "r" | "t" ) ;
+string_interpolation
+                = "{" , logical_expression , "}" ;
+string_part     = escaped_char | string_interpolation | string_content ;
+string_literal  = '"' , { string_part } , '"' ;
+
+
+(* --- 1.7 Collection Literals --- *)
+
+list_literal    = "[" , [ list_element , { "," , list_element } ] , "]" ;
+list_element    = pairs_literal | number_literal | boolean_literal
+                | string_literal | identifier
+                | "(" , single_line_expression , ")" ;
+
+matrix_literal  = "[" , matrix_row , { "," , matrix_row } , "]" ;
+matrix_row      = "[" , [ single_line_expression
+                , { "," , single_line_expression } ] , "]" ;
+
+pairs_literal   = "{" , [ pair_element , { "," , pair_element } ] , "}" ;
+pair_element    = ( string_literal | identifier | decimal_integer )
+                , ":" , single_line_expression ;
+
+
+(* ======================================================================== *)
+(* 2. TYPE SYSTEM                                                           *)
+(* ======================================================================== *)
+
+core_type       = "boolean" | "integer" | "number" | "string"
+                | "void" | "any" ;
+
+size_specifier  = ":" , DIGIT , { DIGIT } , [ "u" ] ;
+
+sized_type      = core_type , size_specifier ;
+                (* e.g., integer:8, integer:64u, number:32 *)
+
+list_type       = "list" , "<" , type , ">" ;
+matrix_type     = "matrix" , "<" , type , ">" ;
+pairs_type      = "pairs" , "<" , type , "," , type , ">" ;
+
+generic_type    = identifier , "<" , type_arguments , ">" ;
+type_arguments  = type , { "," , type } ;
+type_parameters = "<" , type_parameter , { "," , type_parameter } , ">" ;
+type_parameter  = identifier ;
+
+type            = matrix_type | list_type | pairs_type | generic_type
+                | sized_type | core_type | identifier | type_parameter ;
+
+variable_type   = matrix_type | list_type | pairs_type
+                | sized_type | core_type | identifier ;
+
+parameter_type  = matrix_type | list_type | pairs_type
+                | sized_type | core_type | identifier ;
+
+function_return_type
+                = matrix_type | list_type | pairs_type | generic_type
+                | sized_type | core_type ;
+
+external_return_type
+                = "void" | matrix_type | list_type | pairs_type
+                | generic_type | sized_type | core_type | identifier ;
+
+
+(* ======================================================================== *)
+(* 3. EXPRESSIONS                                                           *)
+(* ======================================================================== *)
+
+(* --- 3.1 Operator Precedence (lowest to highest) --- *)
+(*
+   1.  default          (null coalescing)
+   2.  or               (logical)
+   3.  and              (logical)
+   4.  ==  !=  <  >  <=  >=  is    (comparison/equality)
+   5.  +  -             (additive)
+   6.  *  /  %          (multiplicative)
+   7.  ^                (power, right-associative)
+   8.  not  -           (unary prefix)
+   9.  !                (postfix required/non-null assertion)
+   10. primary          (literals, calls, access)
+*)
+
+(* --- 3.2 Operators --- *)
+
+comparison_op   = "==" | "!=" | "<=" | ">=" | "<" | ">"
+                | "is" , NOT ( ALPHANUMERIC | "_" ) ;
+logical_op      = "and" , NOT ( ALPHANUMERIC | "_" )
+                | "or" , NOT ( ALPHANUMERIC | "_" ) ;
+default_op      = "default" , NOT ( ALPHANUMERIC | "_" ) ;
+unary_op        = "not" , NOT ( ALPHANUMERIC | "_" )
+                | "-" ;
+required_op     = "!" ;
+additive_op     = "+" | "-" ;
+multiplicative_op
+                = "*" | "/" | "%" ;
+power_op        = "^" ;
+
+
+(* --- 3.3 Expression Rules --- *)
+
+expression      = on_error_block | on_error_expression | base_expression ;
+
+base_expression = conditional_expression | default_expression ;
+
+default_expression
+                = logical_expression
+                , { default_op , logical_expression } ;
+
+logical_expression
+                = comparison_expression
+                , { logical_op , comparison_expression } ;
+
+comparison_expression
+                = unary_expression
+                , { comparison_op , unary_expression } ;
+
+unary_expression
+                = { unary_op } , additive_expression ;
+
+additive_expression
+                = multiplicative_expression
+                , { additive_op , multiplicative_expression } ;
+
+multiplicative_expression
+                = power_expression
+                , { multiplicative_op , power_expression } ;
+
+power_expression
+                = postfix_primary
+                , { power_op , postfix_primary } ;
+                (* Note: power is right-associative: 2^3^2 = 2^(3^2) *)
+
+postfix_primary = primary , [ required_op ] ;
+
+conditional_expression
+                = "if" , comparison_expression
+                , "then" , additive_expression
+                , "else" , additive_expression ;
+
+on_error_expression
+                = base_expression , "onError" , base_expression ;
+
+on_error_block  = base_expression , "onError" , ":" , indented_block ;
+
+
+(* --- 3.4 Primary Expressions --- *)
+
+primary         = number_literal
+                | boolean_literal
+                | null_literal
+                | string_literal
+                | matrix_literal
+                | list_literal
+                | pairs_literal
+                | "(" , expression , ")"
+                | constructor_call
+                | base_call
+                | namespace_method_chain
+                | three_level_method_call
+                | property_method_call
+                | namespace_function_call
+                | multiple_method_call
+                | chained_method_call
+                | method_call
+                | function_call
+                | static_method_call
+                | start_expression
+                | list_access
+                | property_access
+                | "error"
+                | "base"
+                | identifier ;
+
+(* Note: ordering matters for PEG disambiguation. In EBNF, parsers must
+   attempt longer matches first (e.g., namespace_method_chain before
+   namespace_function_call, chained_method_call before method_call). *)
+
+
+(* --- 3.5 Function and Method Calls --- *)
+
+function_call   = identifier , [ type_arguments ]
+                , "(" , [ argument_list ] , ")" ;
+
+method_call     = method_call_base , method_call_segment ;
+
+chained_method_call
+                = ( function_call | property_access | identifier )
+                , method_call_segment , { method_call_segment } ;
+
+multiple_method_call
+                = method_call_base
+                , method_call_segment , method_call_segment
+                , { method_call_segment } ;
+
+namespace_function_call
+                = namespace_identifier , "."
+                , identifier , "(" , [ argument_list ] , ")" ;
+
+namespace_method_chain
+                = namespace_identifier , "."
+                , identifier , "(" , [ argument_list ] , ")"
+                , method_call_segment , { method_call_segment } ;
+
+three_level_method_call
+                = identifier , "." , identifier , "."
+                , method_name , "(" , [ argument_list ] , ")" ;
+
+property_method_call
+                = identifier , ( "." , identifier ) , ( "." , identifier )
+                , { "." , identifier }
+                , "." , method_name , "(" , [ argument_list ] , ")" ;
+
+static_method_call
+                = static_class_name , "."
+                , method_name , "(" , [ argument_list ] , ")" ;
+
+method_call_base
+                = builtin_class_name | string_literal | number_literal
+                | boolean_literal | identifier
+                | "(" , single_line_expression , ")" ;
+
+method_call_segment
+                = "." , method_name , "(" , [ argument_list ] , ")" ;
+
+argument_list   = argument_expression , { "," , argument_expression } ;
+
+argument_expression
+                = (* Same precedence hierarchy as expression,
+                     but within argument context *) ;
+
+
+(* --- 3.6 Access Expressions --- *)
+
+property_access = identifier , "." , identifier , { "." , identifier } ;
+
+list_access     = identifier , "[" , additive_expression , "]"
+                , { "[" , additive_expression , "]" } ;
+
+constructor_call
+                = class_name , "(" , [ argument_list ] , ")" ;
+
+base_call       = "base" , "(" , [ argument_list ] , ")" ;
+
+start_expression
+                = "start" , expression ;
+
+
+(* --- 3.7 Single-Line Expressions --- *)
+
+(* Used in variable declarations, list elements, and other contexts
+   where the expression must not span multiple lines. Same precedence
+   hierarchy as expression but restricted to single-line context. *)
+
+single_line_expression
+                = (* Same precedence as expression, single line only *) ;
+
+
+(* ======================================================================== *)
+(* 4. STATEMENTS                                                            *)
+(* ======================================================================== *)
+
+statement       = require_statement
+                | print_newline_statement
+                | print_parenthesized_statement
+                | print_bare_statement
+                | framework_block
+                | apply_block
+                | standalone_on_error
+                | on_error_block
+                | reset_statement
+                | function_call
+                | method_call
+                | assignment
+                | return_statement
+                | break_statement
+                | continue_statement
+                | error_statement
+                | if_statement
+                | while_statement
+                | iterate_statement
+                | range_iterate_statement
+                | test
+                | background_statement
+                | later_assignment
+                | standalone_input_declaration
+                | base_call
+                | start_expression
+                | variable_declaration ;
+
+
+(* --- 4.1 Variable Declaration --- *)
+
+variable_declaration
+                = variable_declaration_with_assignment
+                | variable_declaration_without_assignment ;
+
+variable_declaration_with_assignment
+                = variable_type , variable_name , "=" , expression ;
+
+variable_declaration_without_assignment
+                = NOT "print"
+                , variable_type , variable_name
+                , NOT ( "(" | "(" ) ;
+
+(* --- 4.2 Assignment --- *)
+
+assignment      = assignment_target , "=" , expression ;
+
+assignment_target
+                = identifier
+                , [ ( "[" , additive_expression , "]" )
+                  | ( "." , identifier , { "." , identifier } ) ] ;
+
+
+(* --- 4.3 Return --- *)
+
+return_statement
+                = "return" , [ expression ] ;
+
+
+(* --- 4.4 Print --- *)
+
+print_parenthesized_statement
+                = "print" , "(" , argument_list , ")" ;
+
+print_newline_statement
+                = "print" , "(" , argument_list , ")" , "+" ;
+
+print_bare_statement
+                = "print"
+                , NOT ( ALPHANUMERIC | "_" | ":" )
+                , single_line_expression ;
+
+
+(* --- 4.5 Error --- *)
+
+error_statement = "error" , "(" , expression , ")" ;
+
+
+(* --- 4.6 Control Flow --- *)
+
+if_statement    = "if" , expression , indented_block , [ else_block ] ;
+
+else_block      = NEWLINE , { empty_line } , { INDENT }
+                , "else"
+                , ( ( "if" , expression , indented_block , [ else_block ] )
+                  | indented_block ) ;
+
+while_statement = "while" , expression , indented_block ;
+
+iterate_statement
+                = "iterate" , identifier , "in" , expression
+                , indented_block ;
+
+range_iterate_statement
+                = "iterate" , identifier , "in"
+                , expression , "to" , expression
+                , [ "step" , expression ]
+                , indented_block ;
+
+break_statement = "break" ;
+
+continue_statement
+                = "continue" ;
+
+
+(* --- 4.7 Error Handling --- *)
+
+standalone_on_error
+                = "onError" , ":" , indented_block ;
+
+
+(* --- 4.8 State Operations --- *)
+
+reset_statement = "reset" , ( ( "state" , NOT ( ALPHANUMERIC | "_" ) )
+                            | identifier ) ;
+
+require_statement
+                = "require" , expression ;
+
+
+(* --- 4.9 Async --- *)
+
+background_statement
+                = "background" , expression ;
+
+later_assignment
+                = "later" , identifier , "=" , expression ;
+
+
+(* ======================================================================== *)
+(* 5. INDENTED BLOCKS                                                       *)
+(* ======================================================================== *)
+
+indented_block  = simple_indented_block | function_nested_block ;
+
+simple_indented_block
+                = NEWLINE , { empty_line }
+                , INDENT , statement
+                , { NEWLINE , { empty_line } , INDENT , statement } ;
+
+function_nested_block
+                = NEWLINE , { empty_line }
+                , INDENT , INDENT , { INDENT } , statement
+                , { NEWLINE , { empty_line }
+                  , INDENT , INDENT , { INDENT } , statement } ;
+
+
+(* ======================================================================== *)
+(* 6. TOP-LEVEL DECLARATIONS                                                *)
+(* ======================================================================== *)
+
+program         = { empty_line } , { program_item , { empty_line } } ;
+
+program_item    = import_block
+                | import_statement
+                | private_block
+                | external_block
+                | state_block
+                | watch_block
+                | screen_block
+                | framework_block
+                | start_block
+                | functions_block
+                | tests_block
+                | class_declaration
+                | apply_block ;
+
+
+(* --- 6.1 Start Block --- *)
+
+start_block     = "start" , ":" , simple_indented_block ;
+
+
+(* --- 6.2 Functions Block --- *)
+
+functions_block = "functions" , ":" , NEWLINE , { empty_line }
+                , function_declaration_line
+                , { NEWLINE , { empty_line } , function_declaration_line } ;
+
+function_declaration_line
+                = INDENT , { INDENT } , function_in_block ;
+
+function_in_block
+                = [ function_return_type | "void" | class_name ]
+                , function_name , "(" , [ parameter_list ] , ")"
+                , function_body_in_block ;
+
+parameter       = [ parameter_type ] , parameter_name
+                , [ "=" , logical_expression ] ;
+
+parameter_list  = parameter , { "," , parameter } ;
+
+function_body_in_block
+                = NEWLINE , { empty_line }
+                , [ INDENT , { INDENT } , setup_block , [ NEWLINE ] ]
+                , function_body_statements ;
+
+function_body_statements
+                = function_body_statement
+                , { NEWLINE , { empty_line } , function_body_statement } ;
+
+function_body_statement
+                = INDENT , { INDENT } , statement ;
+
+
+(* --- 6.3 Setup Blocks (inside functions) --- *)
+
+setup_block     = ( description_block , NEWLINE , input_block )
+                | ( input_block , NEWLINE , description_block )
+                | input_block
+                | description_block ;
+
+description_block
+                = "description" , string_literal ;
+
+input_block     = "input" , NEWLINE , { empty_line }
+                , INDENT , { INDENT } , input_declaration
+                , { NEWLINE , { empty_line }
+                  , INDENT , { INDENT } , input_declaration } ;
+
+input_declaration
+                = type , identifier , [ "=" , expression ] ;
+
+standalone_input_declaration
+                = "input" , type , identifier , [ "=" , expression ] ;
+
+
+(* --- 6.4 Class Declaration --- *)
+
+class_declaration
+                = "class" , identifier
+                , [ "is" , type ]
+                , [ indented_class_body ] ;
+
+indented_class_body
+                = NEWLINE , { empty_line }
+                , INDENT , { INDENT } , class_body_item
+                , { NEWLINE , { empty_line }
+                  , INDENT , { INDENT } , class_body_item } ;
+
+class_body_item = class_functions_block
+                | constructor
+                | class_field ;
+
+class_field     = type , identifier , [ "=" , expression ] ;
+
+class_functions_block
+                = "functions" , ":" , NEWLINE
+                , { class_function_line | empty_line } ;
+
+class_function_line
+                = INDENT , { INDENT } , function_in_block ;
+
+constructor     = "constructor" , "(" , [ constructor_parameter_list ] , ")"
+                , [ constructor_block ] ;
+
+constructor_parameter_list
+                = constructor_parameter
+                , { "," , constructor_parameter } ;
+
+constructor_parameter
+                = [ type ] , parameter_name ;
+
+constructor_block
+                = NEWLINE , { empty_line }
+                , INDENT , INDENT , { INDENT } , statement
+                , { NEWLINE , { empty_line }
+                  , INDENT , INDENT , { INDENT } , statement } ;
+
+
+(* --- 6.5 External Block --- *)
+
+external_block  = "external" , [ string_literal ] , ":"
+                , NEWLINE , { empty_line }
+                , INDENT , { INDENT } , external_function_declaration
+                , { NEWLINE , { empty_line }
+                  , INDENT , { INDENT } , external_function_declaration } ;
+
+external_function_declaration
+                = external_return_type , function_name
+                , "(" , [ parameter_list ] , ")" ;
+
+
+(* --- 6.6 Import Block --- *)
+
+import_block    = "import" , ":" , import_list ;
+
+import_statement
+                = "import" , ( file_path_import | identifier
+                             | ( ":" , import_item ) ) ;
+
+import_list     = NEWLINE , { empty_line }
+                , INDENT , { INDENT } , import_item
+                , { NEWLINE , { empty_line }
+                  , INDENT , { INDENT } , import_item } ;
+
+import_item     = file_path_import
+                | module_name , "." , module_name , "as" , module_name
+                | module_name , "." , module_name
+                | module_name , "as" , module_name
+                | module_name ;
+
+file_path_import
+                = '"' , file_path_inner , '"' ;
+
+file_path_inner = { ANY - '"' } ;
+
+
+(* --- 6.7 Private Block --- *)
+
+private_block   = "private" , ":" , NEWLINE , { empty_line }
+                , INDENT , { INDENT } , private_item
+                , { NEWLINE , { empty_line }
+                  , INDENT , { INDENT } , private_item } ;
+
+private_item    = identifier | function_in_block ;
+
+
+(* --- 6.8 State Block --- *)
+
+state_block     = "state" , ":" , indented_state_declarations
+                , [ rules_block ] ;
+
+indented_state_declarations
+                = NEWLINE , { empty_line }
+                , INDENT , { INDENT } , ( state_declaration | computed_block )
+                , { NEWLINE , { empty_line }
+                  , INDENT , { INDENT }
+                  , ( state_declaration | computed_block ) } ;
+
+state_declaration
+                = type , identifier , "=" , single_line_expression
+                , [ guard_clause ] ;
+
+guard_clause    = NEWLINE , { empty_line }
+                , INDENT , INDENT , { INDENT }
+                , "guard" , expression , "else" , string_literal ;
+
+rules_block     = NEWLINE , { empty_line }
+                , INDENT , "rules" , ":"
+                , { NEWLINE , { empty_line }
+                  , INDENT , INDENT , expression } ;
+
+computed_block  = "computed" , ":"
+                , NEWLINE , { empty_line }
+                , INDENT , { INDENT } , computed_declaration
+                , { NEWLINE , { empty_line }
+                  , INDENT , { INDENT } , computed_declaration } ;
+
+computed_declaration
+                = type , identifier , computed_body ;
+
+computed_body   = NEWLINE , { empty_line }
+                , INDENT , { INDENT } , statement
+                , { NEWLINE , { empty_line }
+                  , INDENT , { INDENT } , statement } ;
+
+
+(* --- 6.9 Watch Block --- *)
+
+watch_block     = "watch" , watch_targets , ":" , indented_block ;
+
+watch_targets   = "(" , identifier , { "," , identifier } , ")"
+                | identifier ;
+
+
+(* --- 6.10 Screen Block --- *)
+
+screen_block    = "screen" , identifier , ":"
+                , NEWLINE , { empty_line }
+                , screen_body_item
+                , { NEWLINE , { empty_line } , screen_body_item } ;
+
+screen_body_item
+                = INDENT , { INDENT }
+                , ( state_block | watch_block | functions_block
+                  | class_functions_block ) ;
+
+
+(* --- 6.11 Tests Block --- *)
+
+tests_block     = "tests" , ":" , NEWLINE , { empty_line }
+                , INDENT , { INDENT } , test_case
+                , { NEWLINE , { empty_line }
+                  , INDENT , { INDENT } , test_case } ;
+
+test_case       = named_test | anonymous_test ;
+
+named_test      = string_literal , ":" , expression , "=" , expression ;
+
+anonymous_test  = expression , "=" , expression ;
+
+test            = "test" , string_literal , indented_block ;
+
+
+(* --- 6.12 Apply Blocks --- *)
+
+apply_block     = constant_apply_block
+                | type_apply_block
+                | method_apply_block
+                | function_apply_block ;
+
+constant_apply_block
+                = "constant" , ":"
+                , NEWLINE , { empty_line }
+                , INDENT , { INDENT } , constant_assignment
+                , { NEWLINE , { empty_line }
+                  , INDENT , { INDENT } , constant_assignment } ;
+
+constant_assignment
+                = type , identifier , "=" , single_line_expression ;
+
+type_apply_block
+                = ( sized_type | core_type | matrix_type
+                  | list_type | pairs_type ) , ":"
+                , NEWLINE , { empty_line }
+                , INDENT , { INDENT } , variable_assignment
+                , { NEWLINE , { empty_line }
+                  , INDENT , { INDENT } , variable_assignment } ;
+
+variable_assignment
+                = identifier , "=" , single_line_expression ;
+
+method_apply_block
+                = identifier , "." , identifier , { "." , identifier } , ":"
+                , indented_expressions ;
+
+function_apply_block
+                = NOT ( "functions" , ":" )
+                , ( "print" | identifier ) , ":"
+                , indented_expressions ;
+
+indented_expressions
+                = NEWLINE , { empty_line }
+                , INDENT , INDENT , { INDENT } , expression
+                , { NEWLINE , { empty_line }
+                  , INDENT , INDENT , { INDENT } , expression } ;
+
+
+(* --- 6.13 Framework Block (Plugin Extension Point) --- *)
+
+(* Framework blocks are the extension point for plugins. The block name
+   is not a keyword — it comes from a plugin's [handles] declaration.
+   The block content is passed as raw text to the plugin's expand()
+   function, which returns Clean Language code.
+
+   See spec/plugins/*.ebnf for plugin-specific grammar extensions. *)
+
+framework_block = NOT keyword
+                , NOT ( "constant" | "functions" | "tests" | "private" )
+                , identifier , [ string_literal | identifier ] , ":"
+                , framework_block_content ;
+
+framework_block_content
+                = NEWLINE , { empty_line }
+                , { INDENT , { INDENT } , { ANY - NEWLINE } , ( NEWLINE | EOI ) } ;
+
+
+(* ======================================================================== *)
+(* 7. TERMINAL SYMBOLS                                                      *)
+(* ======================================================================== *)
+
+ALPHA           = "A"-"Z" | "a"-"z" ;
+UPPER_ALPHA     = "A"-"Z" ;
+LOWER_ALPHA     = "a"-"z" ;
+ALPHANUMERIC    = ALPHA | DIGIT ;
+DIGIT           = "0"-"9" ;
+HEX_DIGIT       = DIGIT | "a"-"f" | "A"-"F" ;
+BIN_DIGIT       = "0" | "1" ;
+OCT_DIGIT       = "0"-"7" ;
+TAB             = ? Unicode U+0009 ? ;
+SPACE           = ? Unicode U+0020 ? ;
+LF              = ? Unicode U+000A ? ;
+CR              = ? Unicode U+000D ? ;
+ANY             = ? any Unicode character ? ;
+EOI             = ? end of input ? ;
+NOT             = ? negative lookahead — following sequence must not match ? ;

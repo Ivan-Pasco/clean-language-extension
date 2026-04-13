@@ -1,5 +1,8 @@
 # Host Bridge Specification
 
+> **Authoritative source for function signatures:** [`function-registry.toml`](function-registry.toml)
+> This document provides human-readable descriptions. The TOML registry is the machine-checkable source of truth validated by automated tests.
+
 Complete reference for all portable host functions available in the `host-bridge` library.
 
 ## Function Signatures
@@ -89,7 +92,7 @@ All math functions are available with both underscore (`math_sin`) and dot (`mat
 
 ---
 
-## String Operations (25+ functions)
+## String Operations (27+ functions)
 
 ### Concatenation & Modification
 
@@ -120,6 +123,13 @@ All math functions are available with both underscore (`math_sin`) and dot (`mat
 |----------|-----------|-------------|
 | `string_compare` | `(a_ptr: i32, a_len: i32, b_ptr: i32, b_len: i32) -> i32` | Compare (-1, 0, 1) |
 | `string_index_of` | `(haystack_ptr: i32, haystack_len: i32, needle_ptr: i32, needle_len: i32) -> i32` | Find substring index (-1 if not found) |
+
+### HTML Encoding
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `_html_escape` | `(ptr: i32, len: i32) -> i32` | Escape HTML entities (`&`, `<`, `>`, `"`, `'`) for safe interpolation |
+| `_html_raw` | `(ptr: i32, len: i32) -> i32` | Pass-through string for raw HTML insertion |
 
 ---
 
@@ -228,14 +238,57 @@ Headers are passed as JSON object:
 
 ---
 
-## Crypto (4 functions)
+## Crypto (7 functions)
+
+### Password Hashing
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
-| `_auth_hash_password` | `(password_ptr: i32, password_len: i32) -> i32` | Hash password (bcrypt) |
-| `_auth_verify_password` | `(password_ptr: i32, password_len: i32, hash_ptr: i32, hash_len: i32) -> i32` | Verify password (0/1) |
-| `crypto_random_bytes` | `(len: i32) -> i32` | Generate random bytes (hex string) |
-| `crypto_sha256` | `(data_ptr: i32, data_len: i32) -> i32` | Compute SHA256 hash (hex string) |
+| `_crypto_hash_password` | `(password_ptr: i32, password_len: i32) -> i32` | Hash password (bcrypt), returns hash string |
+| `_crypto_verify_password` | `(password_ptr: i32, password_len: i32, hash_ptr: i32, hash_len: i32) -> i32` | Verify password against hash (1=match, 0=no match) |
+
+### Random
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `_crypto_random_bytes` | `(len: i32) -> i32` | Generate random bytes (base64 encoded) |
+| `_crypto_random_hex` | `(len: i32) -> i32` | Generate random bytes (hex encoded) |
+
+### Hashing
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `_crypto_hash_sha256` | `(data_ptr: i32, data_len: i32) -> i32` | SHA-256 hash (hex string) |
+| `_crypto_hash_sha512` | `(data_ptr: i32, data_len: i32) -> i32` | SHA-512 hash (hex string) |
+| `_crypto_hmac` | `(data_ptr: i32, data_len: i32, key_ptr: i32, key_len: i32, algo_ptr: i32, algo_len: i32) -> i32` | HMAC digest (hex). Algorithm: "sha256" or "sha512" |
+
+---
+
+## JWT (3 functions)
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `_jwt_sign` | `(payload_ptr: i32, payload_len: i32, secret_ptr: i32, secret_len: i32, algo_ptr: i32, algo_len: i32) -> i32` | Sign JWT token. Payload is JSON, algo is "HS256"/"HS384"/"HS512" |
+| `_jwt_verify` | `(token_ptr: i32, token_len: i32, secret_ptr: i32, secret_len: i32, algo_ptr: i32, algo_len: i32) -> i32` | Verify JWT, returns JSON payload or error JSON |
+| `_jwt_decode` | `(token_ptr: i32, token_len: i32) -> i32` | Decode JWT without verification, returns JSON payload |
+
+---
+
+## Environment (1 function)
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `_env_get` | `(name_ptr: i32, name_len: i32) -> i32` | Get environment variable value (empty if not found or blocked) |
+
+**Security:** Certain sensitive environment variables are blocked (e.g., passwords, private keys, tokens). Variable names must be alphanumeric with underscores/dots only.
+
+---
+
+## Time (1 function)
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `_time_now` | `() -> i64` | Current Unix timestamp (seconds since epoch) |
 
 ---
 

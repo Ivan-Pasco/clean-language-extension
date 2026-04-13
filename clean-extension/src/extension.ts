@@ -17,7 +17,6 @@ import { CleanManagerIntegration } from './cleanmanager';
 import { CleanCommands } from './commands';
 import { CleanStatusBar } from './statusbar';
 import { VersionWatcher } from './services/version-watcher';
-import { PluginLoader } from './services/plugin-loader';
 import { CLIIntegration } from './services/cli-integration';
 
 // LSP imports - conditional for compatibility
@@ -39,7 +38,6 @@ let cleanManager: CleanManagerIntegration;
 let commands: CleanCommands;
 let statusBar: CleanStatusBar;
 let versionWatcher: VersionWatcher;
-let pluginLoader: PluginLoader;
 let cliIntegration: CLIIntegration;
 
 export function activate(context: vscode.ExtensionContext) {
@@ -53,8 +51,7 @@ export function activate(context: vscode.ExtensionContext) {
         commands = new CleanCommands(cleanManager);
         statusBar = new CleanStatusBar(cleanManager);
 
-        // Initialize Frame Framework services
-        pluginLoader = new PluginLoader();
+        // Initialize Frame Framework CLI integration
         cliIntegration = new CLIIntegration();
 
         // Connect status bar to commands for updates
@@ -63,13 +60,6 @@ export function activate(context: vscode.ExtensionContext) {
         // Connect CLI integration to status bar for server status
         cliIntegration.onServerStatusChange((status, port) => {
             statusBar.updateServerStatus(status, port);
-        });
-
-        // Connect plugin loader to status bar for plugin count
-        pluginLoader.onPluginsChanged(async () => {
-            const count = pluginLoader.getPluginCount();
-            const names = pluginLoader.getPluginNames();
-            statusBar.updatePluginCount(count, names);
         });
 
         // Preload compile options on activation for faster first use
@@ -188,16 +178,6 @@ export function activate(context: vscode.ExtensionContext) {
             });
         });
 
-        // Initialize Frame Framework plugin loader
-        pluginLoader.initialize(context).then(async () => {
-            // Update status bar with initial plugin count
-            const count = pluginLoader.getPluginCount();
-            const names = pluginLoader.getPluginNames();
-            statusBar.updatePluginCount(count, names);
-        }).catch(error => {
-            console.error('Failed to initialize plugin loader:', error);
-        });
-
         // Check for auto-start server setting
         const serverConfig = vscode.workspace.getConfiguration('clean');
         if (serverConfig.get<boolean>('server.autoStart', false)) {
@@ -226,13 +206,14 @@ async function initializeCleanLanguage(context: vscode.ExtensionContext) {
         const detectionResult = cleanManager.getDetectionResult();
 
         if (!detectionResult || !detectionResult.found) {
-            console.log('Clean Language: cleen not found, LSP disabled');
-            vscode.window.showInformationMessage(
-                'Clean Language: cleen not found. LSP features will be disabled.',
-                'Setup cleen',
+            console.log('Clean Language: cleen not found, language features unavailable');
+            statusBar.showSetupRequired();
+            vscode.window.showWarningMessage(
+                'Clean Language: Compiler not found. Install cleen to enable all language features (syntax highlighting, completions, diagnostics).',
+                'Install cleen',
                 'Check Installation'
             ).then(choice => {
-                if (choice === 'Setup cleen') {
+                if (choice === 'Install cleen') {
                     vscode.commands.executeCommand('clean.setupCleen');
                 } else if (choice === 'Check Installation') {
                     vscode.commands.executeCommand('clean.checkInstallation');
@@ -268,12 +249,19 @@ async function initializeCleanLanguage(context: vscode.ExtensionContext) {
             await statusBar.updateVersionDisplay();
         }
 
-        // Try to start LSP, but don't fail if it's not available
+        // Start language server — this is the single source of truth for all language intelligence
         try {
             await startLanguageClient(context);
         } catch (error) {
-            console.log('Clean Language: LSP not available, continuing without it');
-            vscode.window.showInformationMessage('Clean Language: Language Server not available. Basic features will work.');
+            console.log('Clean Language: Language server not available');
+            vscode.window.showWarningMessage(
+                'Clean Language: Language server not available. Syntax highlighting, completions, and diagnostics require the language server.',
+                'Check Installation'
+            ).then(choice => {
+                if (choice === 'Check Installation') {
+                    vscode.commands.executeCommand('clean.checkInstallation');
+                }
+            });
         }
     } catch (error) {
         console.error('Clean Language: Failed to initialize:', error);
@@ -366,9 +354,6 @@ function enforceCleanIndentationSettings() {
 export function deactivate() {
     try {
         // Dispose Frame Framework services
-        if (pluginLoader) {
-            pluginLoader.dispose();
-        }
         if (cliIntegration) {
             cliIntegration.dispose();
         }

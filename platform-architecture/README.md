@@ -4,9 +4,11 @@ This document describes the runtime architecture for Clean Language, explaining 
 
 ## Quick Links
 
-- [Host Bridge Specification](./HOST_BRIDGE.md) - Portable host functions
+- **[Execution Layers](./EXECUTION_LAYERS.md)** - **CRITICAL: Authoritative layer definitions (READ FIRST)**
+- **[IDE Extension Architecture](./IDE_EXTENSION_ARCHITECTURE.md)** - **CRITICAL: Language Server as single source of truth for IDE**
+- [Host Bridge Specification](./HOST_BRIDGE.md) - Portable host functions (Layer 2)
 - [Memory Model](./MEMORY_MODEL.md) - WASM memory layout and allocation
-- [Server Extensions](./SERVER_EXTENSIONS.md) - HTTP server-specific functions
+- [Server Extensions](./SERVER_EXTENSIONS.md) - HTTP server-specific functions (Layer 3)
 - [Implementing a New Host](./IMPLEMENTING_HOST.md) - Guide for new runtime implementations
 
 ## Architecture Overview

@@ -492,5 +492,154 @@
       "\tstatic: \"$4\""
     ],
     "description": "Frame Framework server configuration"
+  },
+
+  "migrate": {
+    "prefix": "migrate",
+    "body": [
+      "migrate \"${1:001_migration_name}\":",
+      "\tup:",
+      "\t\t${2:CREATE TABLE ...}",
+      "\tdown:",
+      "\t\t${3:DROP TABLE ...}"
+    ],
+    "description": "Define a versioned schema migration"
+  },
+  "ui-theme": {
+    "prefix": "ui theme",
+    "body": [
+      "ui:",
+      "\ttheme:",
+      "\t\tcolors:",
+      "\t\t\tprimary: \"${1:#2563eb}\"",
+      "\t\t\tsecondary: \"${2:#64748b}\"",
+      "\t\t\tbackground: \"${3:#ffffff}\"",
+      "\t\t\ttext: \"${4:#0f172a}\"",
+      "\t\tspacing:",
+      "\t\t\tsm: \"${5:0.5rem}\"",
+      "\t\t\tmd: \"${6:1rem}\"",
+      "\t\t\tlg: \"${7:2rem}\""
+    ],
+    "description": "UI theme with CSS variables"
+  },
+  "auth-tenant": {
+    "prefix": "auth tenant",
+    "body": [
+      "auth:",
+      "\tsession:",
+      "\t\tcookie = \"${1:app.sid}\"",
+      "\t\ttimeoutMinutes = ${2:60}",
+      "\ttenant:",
+      "\t\tfield = \"${3:tenantId}\""
+    ],
+    "description": "Auth configuration with multi-tenant support"
+  },
+  "data-config": {
+    "prefix": "data config",
+    "body": [
+      "data:",
+      "\tengine = \"${1:postgres}\"",
+      "\thost = \"${2:localhost}\"",
+      "\tport = ${3:5432}",
+      "\tdatabase = \"${4:app}\"",
+      "\tuser = \"${5:admin}\"",
+      "\tpassword = env(\"${6:DB_PASSWORD}\")",
+      "\tpool:",
+      "\t\tmax = ${7:10}",
+      "\t\tidleTimeout = ${8:30000}"
+    ],
+    "description": "Database configuration block"
+  },
+  "data-validation": {
+    "prefix": "data validated",
+    "body": [
+      "data ${1:User}",
+      "\tinteger id : pk, auto",
+      "\tstring ${2:name} : min=${3:2}, max=${4:100}",
+      "\tstring ${5:email} : unique, email",
+      "\tinteger ${6:age} : range=${7:0}..${8:150}"
+    ],
+    "description": "Data model with field validation constraints"
+  },
+  "canvas-input": {
+    "prefix": "canvasScene input",
+    "body": [
+      "canvasScene: width=${1:800} height=${2:600}",
+      "",
+      "\tonPointerDown: params=\"x,y\"",
+      "\t\t${3:// handle click}",
+      "",
+      "\tonKeyDown: params=\"key\"",
+      "\t\t${4:// handle key press}",
+      "",
+      "\tonFrame: params=\"dt\"",
+      "\t\tcanvas.clear: color=\"${5:#1a1a2e}\"",
+      "\t\t${6:// draw}"
+    ],
+    "description": "Canvas scene with input handling"
+  },
+  "endpoint-guarded": {
+    "prefix": "endpoint guarded",
+    "body": [
+      "${1:GET} ${2:/api/resource}:",
+      "\tguard:",
+      "\t\trole == \"${3:admin}\"",
+      "\treturns:",
+      "\t\tjson ${4:list<Resource>}",
+      "\tcache:",
+      "\t\tmaxAge = ${5:60}",
+      "\thandle:",
+      "\t\t${6:// handler code}",
+      "\t\treturn json(${7:data})"
+    ],
+    "description": "HTTP endpoint with guard, returns, cache, and handle blocks"
+  },
+  "form-validated": {
+    "prefix": "form validated",
+    "body": [
+      "<form onsubmit.prevent=\"${1:handleSubmit}\">",
+      "\t<label>",
+      "\t\t${2:Email}",
+      "\t\t<input type=\"${3:email}\" cl-bind=\"${4:formData.email}\" cl-validate=\"${5:email}\" error-message=\"${6:Please enter a valid email}\">",
+      "\t</label>",
+      "\t<button type=\"submit\">${7:Submit}</button>",
+      "</form>"
+    ],
+    "description": "HTML form with validation and CSRF auto-injection"
+  },
+  "layout": {
+    "prefix": "layout",
+    "body": [
+      "<!DOCTYPE html>",
+      "<html>",
+      "<head>",
+      "\t<meta charset=\"UTF-8\">",
+      "\t<title>${1:title} - ${2:App}</title>",
+      "\t<link rel=\"stylesheet\" href=\"/css/${3:main}.css\">",
+      "</head>",
+      "<body>",
+      "\t${4:<app-header></app-header>}",
+      "\t<main>",
+      "\t\t<slot></slot>",
+      "\t</main>",
+      "\t${5:<app-footer></app-footer>}",
+      "</body>",
+      "</html>"
+    ],
+    "description": "Page layout template with default slot"
+  },
+  "cl-show": {
+    "prefix": "cl-show",
+    "body": [
+      "<div cl-show=\"${1:isVisible}\">${2:content}</div>"
+    ],
+    "description": "Conditional visibility (CSS display toggle)"
+  },
+  "cl-slot": {
+    "prefix": "cl-slot",
+    "body": [
+      "<div cl-slot=\"${1:name}\">${2:default content}</div>"
+    ],
+    "description": "Named slot for content projection"
   }
 }

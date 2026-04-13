@@ -1,0 +1,1725 @@
+# Clean Language Platform - Shared Function Registry
+#
+# This file is the authoritative source of truth for all host functions
+# exposed to Clean Language WASM modules. It covers Layer 2 (portable
+# host-bridge) and Layer 3 (server-only extensions).
+#
+# Source of truth for Layer 2 signatures: host-bridge/tests/spec_compliance.wat
+# Source of truth for Layer 3 signatures: clean-server/src/bridge.rs
+#
+# ============================================================
+# TYPE EXPANSION RULES
+# ============================================================
+#
+#   "string"  -> WASM (i32, i32)   ptr + len pair
+#   "integer" -> WASM (i64)        64-bit signed integer
+#   "number"  -> WASM (f64)        64-bit float
+#   "boolean" -> WASM (i32)        0 = false, 1 = true
+#   "i32"     -> WASM (i32)        raw 32-bit int (port, count, handler index)
+#   "i64"     -> WASM (i64)        raw 64-bit int
+#   "ptr"     -> WASM (i32)        return only: length-prefixed string pointer
+#                                  format: [4-byte LE length][UTF-8 data]
+#   "void"    -> no return value
+#
+# ============================================================
+# ALIAS CONVENTION
+# ============================================================
+#
+#   canonical name: underscore style (e.g., math_sin)
+#   aliases: dot notation or camelCase variants (e.g., math.sin)
+#
+# ============================================================
+
+[meta]
+version = "1.0.0"
+generated_from = [
+    "host-bridge/tests/spec_compliance.wat",
+    "host-bridge/src/wasm_linker/console.rs",
+    "host-bridge/src/wasm_linker/math.rs",
+    "host-bridge/src/wasm_linker/string_ops.rs",
+    "host-bridge/src/wasm_linker/database.rs",
+    "host-bridge/src/wasm_linker/file_io.rs",
+    "host-bridge/src/wasm_linker/http_client.rs",
+    "host-bridge/src/wasm_linker/crypto_funcs.rs",
+    "host-bridge/src/wasm_linker/env_time.rs",
+    "host-bridge/src/wasm_linker/memory.rs",
+    "src/bridge.rs",
+]
+
+# ============================================================
+# LAYER 2 - CONSOLE I/O (15 functions, 10 canonical)
+# ============================================================
+
+[[functions]]
+name        = "print"
+layer       = 2
+category    = "console"
+module      = "env"
+params      = ["string"]
+returns     = "void"
+aliases     = []
+description = "Print raw string to stdout without a newline"
+
+[[functions]]
+name        = "printl"
+layer       = 2
+category    = "console"
+module      = "env"
+params      = ["string"]
+returns     = "void"
+aliases     = []
+description = "Print raw string to stdout with a trailing newline"
+
+[[functions]]
+name        = "print_string"
+layer       = 2
+category    = "console"
+module      = "env"
+params      = ["string"]
+returns     = "void"
+aliases     = []
+description = "Print raw string without newline (alias intent for typed callers)"
+
+[[functions]]
+name        = "print_integer"
+layer       = 2
+category    = "console"
+module      = "env"
+params      = ["integer"]
+returns     = "void"
+aliases     = []
+description = "Print a 64-bit signed integer to stdout"
+
+[[functions]]
+name        = "print_float"
+layer       = 2
+category    = "console"
+module      = "env"
+params      = ["number"]
+returns     = "void"
+aliases     = []
+description = "Print a 64-bit float to stdout"
+
+[[functions]]
+name        = "print_boolean"
+layer       = 2
+category    = "console"
+module      = "env"
+params      = ["boolean"]
+returns     = "void"
+aliases     = []
+description = "Print a boolean value (0 or 1) as 'false' or 'true' to stdout"
+
+[[functions]]
+name        = "console_log"
+layer       = 2
+category    = "console"
+module      = "env"
+params      = ["string"]
+returns     = "void"
+aliases     = []
+description = "Log message to stdout; also emitted via tracing at INFO level"
+
+[[functions]]
+name        = "console_error"
+layer       = 2
+category    = "console"
+module      = "env"
+params      = ["string"]
+returns     = "void"
+aliases     = []
+description = "Log message to stderr prefixed with [ERROR]"
+
+[[functions]]
+name        = "console_warn"
+layer       = 2
+category    = "console"
+module      = "env"
+params      = ["string"]
+returns     = "void"
+aliases     = []
+description = "Log message to stderr prefixed with [WARN]"
+
+[[functions]]
+name        = "input"
+layer       = 2
+category    = "console"
+module      = "env"
+params      = ["i32"]
+returns     = "ptr"
+aliases     = ["console_input"]
+description = "Prompt user for string input; prompt is length-prefixed pointer; in server context returns empty string"
+
+[[functions]]
+name        = "input_integer"
+layer       = 2
+category    = "console"
+module      = "env"
+params      = ["i32"]
+returns     = "i32"
+aliases     = []
+description = "Prompt user for integer input; prompt is length-prefixed pointer; in server context returns 0"
+
+[[functions]]
+name        = "input_float"
+layer       = 2
+category    = "console"
+module      = "env"
+params      = ["i32"]
+returns     = "number"
+aliases     = []
+description = "Prompt user for float input; prompt is length-prefixed pointer; in server context returns 0.0"
+
+[[functions]]
+name        = "input_yesno"
+layer       = 2
+category    = "console"
+module      = "env"
+params      = ["i32"]
+returns     = "boolean"
+aliases     = []
+description = "Prompt user for yes/no input; prompt is length-prefixed pointer; in server context returns 0 (false)"
+
+[[functions]]
+name        = "input_range"
+layer       = 2
+category    = "console"
+module      = "env"
+params      = ["i32", "i32", "i32", "i32"]
+returns     = "i32"
+aliases     = []
+description = "Prompt user for integer in [min, max] range with step; prompt is length-prefixed pointer; in server context returns min"
+
+# ============================================================
+# LAYER 2 - LIST FUNCTIONS (1 function)
+# ============================================================
+
+[[functions]]
+name        = "list.push_f64"
+layer       = 2
+category    = "list"
+module      = "env"
+params      = ["i32", "number"]
+returns     = "i32"
+aliases     = []
+description = "Push an f64 value onto a list in-place; list_ptr is raw i32 pointer to 16-byte-header list"
+
+# ============================================================
+# LAYER 2 - MATH FUNCTIONS (56 total, 28 canonical with dot aliases)
+# ============================================================
+
+[[functions]]
+name        = "math_sin"
+layer       = 2
+category    = "math"
+module      = "env"
+params      = ["number"]
+returns     = "number"
+aliases     = ["math.sin"]
+description = "Sine of angle in radians"
+
+[[functions]]
+name        = "math_cos"
+layer       = 2
+category    = "math"
+module      = "env"
+params      = ["number"]
+returns     = "number"
+aliases     = ["math.cos"]
+description = "Cosine of angle in radians"
+
+[[functions]]
+name        = "math_tan"
+layer       = 2
+category    = "math"
+module      = "env"
+params      = ["number"]
+returns     = "number"
+aliases     = ["math.tan"]
+description = "Tangent of angle in radians"
+
+[[functions]]
+name        = "math_asin"
+layer       = 2
+category    = "math"
+module      = "env"
+params      = ["number"]
+returns     = "number"
+aliases     = ["math.asin"]
+description = "Arc sine; returns value in radians in [-pi/2, pi/2]"
+
+[[functions]]
+name        = "math_acos"
+layer       = 2
+category    = "math"
+module      = "env"
+params      = ["number"]
+returns     = "number"
+aliases     = ["math.acos"]
+description = "Arc cosine; returns value in radians in [0, pi]"
+
+[[functions]]
+name        = "math_atan"
+layer       = 2
+category    = "math"
+module      = "env"
+params      = ["number"]
+returns     = "number"
+aliases     = ["math.atan"]
+description = "Arc tangent; returns value in radians in (-pi/2, pi/2)"
+
+[[functions]]
+name        = "math_atan2"
+layer       = 2
+category    = "math"
+module      = "env"
+params      = ["number", "number"]
+returns     = "number"
+aliases     = ["math.atan2"]
+description = "Two-argument arc tangent of y/x; returns angle in [-pi, pi]"
+
+[[functions]]
+name        = "math_sinh"
+layer       = 2
+category    = "math"
+module      = "env"
+params      = ["number"]
+returns     = "number"
+aliases     = ["math.sinh"]
+description = "Hyperbolic sine"
+
+[[functions]]
+name        = "math_cosh"
+layer       = 2
+category    = "math"
+module      = "env"
+params      = ["number"]
+returns     = "number"
+aliases     = ["math.cosh"]
+description = "Hyperbolic cosine"
+
+[[functions]]
+name        = "math_tanh"
+layer       = 2
+category    = "math"
+module      = "env"
+params      = ["number"]
+returns     = "number"
+aliases     = ["math.tanh"]
+description = "Hyperbolic tangent"
+
+[[functions]]
+name        = "math_ln"
+layer       = 2
+category    = "math"
+module      = "env"
+params      = ["number"]
+returns     = "number"
+aliases     = ["math.ln"]
+description = "Natural logarithm (base e)"
+
+[[functions]]
+name        = "math_log10"
+layer       = 2
+category    = "math"
+module      = "env"
+params      = ["number"]
+returns     = "number"
+aliases     = ["math.log10"]
+description = "Base-10 logarithm"
+
+[[functions]]
+name        = "math_log2"
+layer       = 2
+category    = "math"
+module      = "env"
+params      = ["number"]
+returns     = "number"
+aliases     = ["math.log2"]
+description = "Base-2 logarithm"
+
+[[functions]]
+name        = "math_exp"
+layer       = 2
+category    = "math"
+module      = "env"
+params      = ["number"]
+returns     = "number"
+aliases     = ["math.exp"]
+description = "e raised to the power x"
+
+[[functions]]
+name        = "math_exp2"
+layer       = 2
+category    = "math"
+module      = "env"
+params      = ["number"]
+returns     = "number"
+aliases     = ["math.exp2"]
+description = "2 raised to the power x"
+
+[[functions]]
+name        = "math_pow"
+layer       = 2
+category    = "math"
+module      = "env"
+params      = ["number", "number"]
+returns     = "number"
+aliases     = ["math.pow"]
+description = "Base raised to the exponent power (base^exp)"
+
+[[functions]]
+name        = "math_sqrt"
+layer       = 2
+category    = "math"
+module      = "env"
+params      = ["number"]
+returns     = "number"
+aliases     = ["math.sqrt"]
+description = "Square root"
+
+[[functions]]
+name        = "math_floor"
+layer       = 2
+category    = "math"
+module      = "env"
+params      = ["number"]
+returns     = "number"
+aliases     = ["math.floor"]
+description = "Round toward negative infinity"
+
+[[functions]]
+name        = "math_ceil"
+layer       = 2
+category    = "math"
+module      = "env"
+params      = ["number"]
+returns     = "number"
+aliases     = ["math.ceil"]
+description = "Round toward positive infinity"
+
+[[functions]]
+name        = "math_round"
+layer       = 2
+category    = "math"
+module      = "env"
+params      = ["number"]
+returns     = "number"
+aliases     = ["math.round"]
+description = "Round to nearest integer (half rounds away from zero)"
+
+[[functions]]
+name        = "math_trunc"
+layer       = 2
+category    = "math"
+module      = "env"
+params      = ["number"]
+returns     = "number"
+aliases     = ["math.trunc"]
+description = "Truncate fractional part (round toward zero)"
+
+[[functions]]
+name        = "math_abs"
+layer       = 2
+category    = "math"
+module      = "env"
+params      = ["number"]
+returns     = "number"
+aliases     = ["math.abs"]
+description = "Absolute value"
+
+[[functions]]
+name        = "math_min"
+layer       = 2
+category    = "math"
+module      = "env"
+params      = ["number", "number"]
+returns     = "number"
+aliases     = ["math.min"]
+description = "Minimum of two values"
+
+[[functions]]
+name        = "math_max"
+layer       = 2
+category    = "math"
+module      = "env"
+params      = ["number", "number"]
+returns     = "number"
+aliases     = ["math.max"]
+description = "Maximum of two values"
+
+[[functions]]
+name        = "math_sign"
+layer       = 2
+category    = "math"
+module      = "env"
+params      = ["number"]
+returns     = "number"
+aliases     = ["math.sign"]
+description = "Sign of value: -1.0 if negative, 0.0 if zero, 1.0 if positive"
+
+[[functions]]
+name        = "math_pi"
+layer       = 2
+category    = "math"
+module      = "env"
+params      = []
+returns     = "number"
+aliases     = ["math.pi"]
+description = "Return the mathematical constant pi (3.14159...)"
+
+[[functions]]
+name        = "math_e"
+layer       = 2
+category    = "math"
+module      = "env"
+params      = []
+returns     = "number"
+aliases     = ["math.e"]
+description = "Return Euler's number e (2.71828...)"
+
+[[functions]]
+name        = "math_random"
+layer       = 2
+category    = "math"
+module      = "env"
+params      = []
+returns     = "number"
+aliases     = ["math.random"]
+description = "Return a cryptographically random float in [0.0, 1.0)"
+
+# ============================================================
+# LAYER 2 - STRING OPERATIONS (34 total, 21 canonical)
+# ============================================================
+
+[[functions]]
+name        = "string_concat"
+layer       = 2
+category    = "string"
+module      = "env"
+params      = ["i32", "i32"]
+returns     = "ptr"
+aliases     = ["string.concat"]
+description = "Concatenate two strings; params are length-prefixed pointers; returns length-prefixed result"
+
+[[functions]]
+name        = "string_substring"
+layer       = 2
+category    = "string"
+module      = "env"
+params      = ["i32", "i32", "i32"]
+returns     = "ptr"
+aliases     = ["string.substring"]
+description = "Extract substring; str_ptr is length-prefixed, start/end are byte offsets"
+
+[[functions]]
+name        = "string_trim"
+layer       = 2
+category    = "string"
+module      = "env"
+params      = ["i32"]
+returns     = "ptr"
+aliases     = ["string.trim"]
+description = "Remove leading and trailing ASCII whitespace; param is length-prefixed pointer"
+
+[[functions]]
+name        = "string_trim_start"
+layer       = 2
+category    = "string"
+module      = "env"
+params      = ["i32"]
+returns     = "ptr"
+aliases     = ["string.trimStart"]
+description = "Remove leading ASCII whitespace; param is length-prefixed pointer"
+
+[[functions]]
+name        = "string_trim_end"
+layer       = 2
+category    = "string"
+module      = "env"
+params      = ["i32"]
+returns     = "ptr"
+aliases     = ["string.trimEnd"]
+description = "Remove trailing ASCII whitespace; param is length-prefixed pointer"
+
+[[functions]]
+name        = "string_to_upper"
+layer       = 2
+category    = "string"
+module      = "env"
+params      = ["i32"]
+returns     = "ptr"
+aliases     = ["string.toUpperCase", "string_toUpperCase"]
+description = "Convert string to uppercase; param is length-prefixed pointer"
+
+[[functions]]
+name        = "string_to_lower"
+layer       = 2
+category    = "string"
+module      = "env"
+params      = ["i32"]
+returns     = "ptr"
+aliases     = ["string.toLowerCase", "string_toLowerCase"]
+description = "Convert string to lowercase; param is length-prefixed pointer"
+
+[[functions]]
+name        = "string_replace"
+layer       = 2
+category    = "string"
+module      = "env"
+params      = ["i32", "i32", "i32"]
+returns     = "ptr"
+aliases     = ["string.replace"]
+description = "Replace first occurrence of find with replacement; all params are length-prefixed pointers"
+
+[[functions]]
+name        = "string_split"
+layer       = 2
+category    = "string"
+module      = "env"
+params      = ["i32", "i32"]
+returns     = "ptr"
+aliases     = ["string.split"]
+description = "Split string by delimiter; params are length-prefixed pointers; returns JSON array"
+
+[[functions]]
+name        = "string_index_of"
+layer       = 2
+category    = "string"
+module      = "env"
+params      = ["i32", "i32"]
+returns     = "i32"
+aliases     = []
+description = "Find byte offset of first occurrence of needle in haystack; -1 if not found"
+
+[[functions]]
+name        = "string_compare"
+layer       = 2
+category    = "string"
+module      = "env"
+params      = ["i32", "i32"]
+returns     = "i32"
+aliases     = []
+description = "Lexicographic comparison: -1 if a < b, 0 if a == b, 1 if a > b"
+
+[[functions]]
+name        = "int_to_string"
+layer       = 2
+category    = "string"
+module      = "env"
+params      = ["i32"]
+returns     = "ptr"
+aliases     = ["integer.toString"]
+description = "Convert 32-bit integer to its decimal string representation"
+
+[[functions]]
+name        = "float_to_string"
+layer       = 2
+category    = "string"
+module      = "env"
+params      = ["number"]
+returns     = "ptr"
+aliases     = ["number.toString"]
+description = "Convert 64-bit float to its string representation"
+
+[[functions]]
+name        = "bool_to_string"
+layer       = 2
+category    = "string"
+module      = "env"
+params      = ["boolean"]
+returns     = "ptr"
+aliases     = ["boolean.toString"]
+description = "Convert boolean (i32) to 'true' or 'false'"
+
+[[functions]]
+name        = "string_to_int"
+layer       = 2
+category    = "string"
+module      = "env"
+params      = ["i32"]
+returns     = "i32"
+aliases     = ["string.toInteger"]
+description = "Parse string as integer; param is length-prefixed pointer; returns 0 on parse failure"
+
+[[functions]]
+name        = "string_to_float"
+layer       = 2
+category    = "string"
+module      = "env"
+params      = ["i32"]
+returns     = "number"
+aliases     = ["string.toNumber"]
+description = "Parse string as 64-bit float; param is length-prefixed pointer; returns 0.0 on parse failure"
+
+[[functions]]
+name        = "string_to_bool"
+layer       = 2
+category    = "string"
+module      = "env"
+params      = ["i32"]
+returns     = "boolean"
+aliases     = ["string.toBoolean"]
+description = "Parse string as boolean; param is length-prefixed pointer; 'true'/'1'/'yes' return 1"
+
+[[functions]]
+name        = "_html_escape"
+layer       = 2
+category    = "string"
+module      = "env"
+params      = ["string"]
+returns     = "ptr"
+aliases     = []
+description = "Escape HTML entities (&, <, >, \", ') in a string for safe interpolation in html: blocks"
+
+[[functions]]
+name        = "_html_raw"
+layer       = 2
+category    = "string"
+module      = "env"
+params      = ["string"]
+returns     = "ptr"
+aliases     = []
+description = "Pass-through string for raw HTML insertion in html: blocks ({!var} interpolation)"
+
+# ============================================================
+# LAYER 2 - DATABASE (5 functions, all canonical)
+# ============================================================
+
+[[functions]]
+name        = "_db_query"
+layer       = 2
+category    = "database"
+module      = "env"
+params      = ["string", "string"]
+returns     = "ptr"
+aliases     = []
+description = "Execute SELECT query with JSON params array; returns JSON result object"
+
+[[functions]]
+name        = "_db_execute"
+layer       = 2
+category    = "database"
+module      = "env"
+params      = ["string", "string"]
+returns     = "i32"
+aliases     = []
+description = "Execute INSERT/UPDATE/DELETE with JSON params; returns affected row count or -1 on error"
+
+[[functions]]
+name        = "_db_begin"
+layer       = 2
+category    = "database"
+module      = "env"
+params      = []
+returns     = "i32"
+aliases     = []
+description = "Begin a database transaction; returns 1 on success, 0 on error"
+
+[[functions]]
+name        = "_db_commit"
+layer       = 2
+category    = "database"
+module      = "env"
+params      = []
+returns     = "i32"
+aliases     = []
+description = "Commit the current database transaction; returns 1 on success, 0 on error"
+
+[[functions]]
+name        = "_db_rollback"
+layer       = 2
+category    = "database"
+module      = "env"
+params      = []
+returns     = "i32"
+aliases     = []
+description = "Rollback the current database transaction; returns 1 on success, 0 on error"
+
+# ============================================================
+# LAYER 2 - FILE I/O (5 functions, all canonical)
+# ============================================================
+
+[[functions]]
+name        = "file_read"
+layer       = 2
+category    = "file_io"
+module      = "env"
+params      = ["string", "i32"]
+returns     = "ptr"
+aliases     = []
+description = "Read file at given path (ptr+len) with mode flag; returns contents as length-prefixed string"
+
+[[functions]]
+name        = "file_write"
+layer       = 2
+category    = "file_io"
+module      = "env"
+params      = ["string", "string"]
+returns     = "i32"
+aliases     = []
+description = "Write content to file; path and content as (ptr+len) pairs; returns 0 on success, -1 on error"
+
+[[functions]]
+name        = "file_exists"
+layer       = 2
+category    = "file_io"
+module      = "env"
+params      = ["string"]
+returns     = "boolean"
+aliases     = []
+description = "Check if file exists; path as (ptr+len); returns 1 if exists, 0 otherwise"
+
+[[functions]]
+name        = "file_delete"
+layer       = 2
+category    = "file_io"
+module      = "env"
+params      = ["string"]
+returns     = "i32"
+aliases     = []
+description = "Delete file; path as (ptr+len); returns 0 on success, -1 on error"
+
+[[functions]]
+name        = "file_append"
+layer       = 2
+category    = "file_io"
+module      = "env"
+params      = ["string", "string"]
+returns     = "i32"
+aliases     = []
+description = "Append content to file; path and content as (ptr+len) pairs; returns 0 on success, -1 on error"
+
+# ============================================================
+# LAYER 2 - HTTP CLIENT (22 functions, all canonical)
+# ============================================================
+
+[[functions]]
+name        = "http_get"
+layer       = 2
+category    = "http_client"
+module      = "env"
+params      = ["string"]
+returns     = "ptr"
+aliases     = []
+description = "Execute HTTP GET request to URL; returns response body as length-prefixed string"
+
+[[functions]]
+name        = "http_post"
+layer       = 2
+category    = "http_client"
+module      = "env"
+params      = ["string", "string"]
+returns     = "ptr"
+aliases     = []
+description = "Execute HTTP POST request with raw body; returns response body"
+
+[[functions]]
+name        = "http_put"
+layer       = 2
+category    = "http_client"
+module      = "env"
+params      = ["string", "string"]
+returns     = "ptr"
+aliases     = []
+description = "Execute HTTP PUT request with raw body; returns response body"
+
+[[functions]]
+name        = "http_patch"
+layer       = 2
+category    = "http_client"
+module      = "env"
+params      = ["string", "string"]
+returns     = "ptr"
+aliases     = []
+description = "Execute HTTP PATCH request with raw body; returns response body"
+
+[[functions]]
+name        = "http_delete"
+layer       = 2
+category    = "http_client"
+module      = "env"
+params      = ["string"]
+returns     = "ptr"
+aliases     = []
+description = "Execute HTTP DELETE request; returns response body"
+
+[[functions]]
+name        = "http_head"
+layer       = 2
+category    = "http_client"
+module      = "env"
+params      = ["string"]
+returns     = "ptr"
+aliases     = []
+description = "Execute HTTP HEAD request; returns response headers as JSON"
+
+[[functions]]
+name        = "http_options"
+layer       = 2
+category    = "http_client"
+module      = "env"
+params      = ["string"]
+returns     = "ptr"
+aliases     = []
+description = "Execute HTTP OPTIONS request; returns response body"
+
+[[functions]]
+name        = "http_post_json"
+layer       = 2
+category    = "http_client"
+module      = "env"
+params      = ["string", "string"]
+returns     = "ptr"
+aliases     = []
+description = "POST JSON body with Content-Type: application/json header; returns response body"
+
+[[functions]]
+name        = "http_put_json"
+layer       = 2
+category    = "http_client"
+module      = "env"
+params      = ["string", "string"]
+returns     = "ptr"
+aliases     = []
+description = "PUT JSON body with Content-Type: application/json header; returns response body"
+
+[[functions]]
+name        = "http_patch_json"
+layer       = 2
+category    = "http_client"
+module      = "env"
+params      = ["string", "string"]
+returns     = "ptr"
+aliases     = []
+description = "PATCH JSON body with Content-Type: application/json header; returns response body"
+
+[[functions]]
+name        = "http_post_form"
+layer       = 2
+category    = "http_client"
+module      = "env"
+params      = ["string", "string"]
+returns     = "ptr"
+aliases     = []
+description = "POST form-urlencoded body with appropriate Content-Type header; returns response body"
+
+[[functions]]
+name        = "http_get_with_headers"
+layer       = 2
+category    = "http_client"
+module      = "env"
+params      = ["string", "string"]
+returns     = "ptr"
+aliases     = []
+description = "HTTP GET with custom headers supplied as JSON object string; returns response body"
+
+[[functions]]
+name        = "http_post_with_headers"
+layer       = 2
+category    = "http_client"
+module      = "env"
+params      = ["string", "string", "string"]
+returns     = "ptr"
+aliases     = []
+description = "HTTP POST with body and custom headers as JSON object string; returns response body"
+
+[[functions]]
+name        = "http_set_user_agent"
+layer       = 2
+category    = "http_client"
+module      = "env"
+params      = ["string"]
+returns     = "void"
+aliases     = []
+description = "Set User-Agent header for subsequent requests (currently no-op)"
+
+[[functions]]
+name        = "http_set_timeout"
+layer       = 2
+category    = "http_client"
+module      = "env"
+params      = ["i32"]
+returns     = "void"
+aliases     = []
+description = "Set request timeout in milliseconds for subsequent requests (currently no-op)"
+
+[[functions]]
+name        = "http_set_max_redirects"
+layer       = 2
+category    = "http_client"
+module      = "env"
+params      = ["i32"]
+returns     = "void"
+aliases     = []
+description = "Set maximum number of redirects to follow (currently no-op)"
+
+[[functions]]
+name        = "http_enable_cookies"
+layer       = 2
+category    = "http_client"
+module      = "env"
+params      = ["boolean"]
+returns     = "void"
+aliases     = []
+description = "Enable or disable cookie jar for subsequent requests (currently no-op)"
+
+[[functions]]
+name        = "http_get_response_code"
+layer       = 2
+category    = "http_client"
+module      = "env"
+params      = []
+returns     = "i32"
+aliases     = []
+description = "Get the HTTP status code of the last response; returns 200 by default"
+
+[[functions]]
+name        = "http_get_response_headers"
+layer       = 2
+category    = "http_client"
+module      = "env"
+params      = []
+returns     = "i32"
+aliases     = []
+description = "Get all headers from the last response as a length-prefixed JSON string; returns 0 (null) currently"
+
+[[functions]]
+name        = "http_encode_url"
+layer       = 2
+category    = "http_client"
+module      = "env"
+params      = ["string"]
+returns     = "ptr"
+aliases     = []
+description = "Percent-encode a string for safe use in a URL"
+
+[[functions]]
+name        = "http_decode_url"
+layer       = 2
+category    = "http_client"
+module      = "env"
+params      = ["string"]
+returns     = "ptr"
+aliases     = []
+description = "Decode a percent-encoded URL string"
+
+[[functions]]
+name        = "http_build_query"
+layer       = 2
+category    = "http_client"
+module      = "env"
+params      = ["string"]
+returns     = "ptr"
+aliases     = []
+description = "Build a URL query string from a JSON object of key-value pairs"
+
+# ============================================================
+# LAYER 2 - CRYPTO (7 functions, all canonical)
+# ============================================================
+
+[[functions]]
+name        = "_crypto_hash_password"
+layer       = 2
+category    = "crypto"
+module      = "env"
+params      = ["string"]
+returns     = "ptr"
+aliases     = []
+description = "Hash a plaintext password using bcrypt; returns hash string or empty on failure"
+
+[[functions]]
+name        = "_crypto_verify_password"
+layer       = 2
+category    = "crypto"
+module      = "env"
+params      = ["string", "string"]
+returns     = "boolean"
+aliases     = []
+description = "Verify plaintext password against bcrypt hash; returns 1 if valid, 0 if invalid"
+
+[[functions]]
+name        = "_crypto_random_bytes"
+layer       = 2
+category    = "crypto"
+module      = "env"
+params      = ["i32"]
+returns     = "ptr"
+aliases     = []
+description = "Generate N cryptographically random bytes; returns base64-encoded result"
+
+[[functions]]
+name        = "_crypto_random_hex"
+layer       = 2
+category    = "crypto"
+module      = "env"
+params      = ["i32"]
+returns     = "ptr"
+aliases     = []
+description = "Generate N cryptographically random bytes; returns lowercase hex string (2N chars)"
+
+[[functions]]
+name        = "_crypto_hash_sha256"
+layer       = 2
+category    = "crypto"
+module      = "env"
+params      = ["string"]
+returns     = "ptr"
+aliases     = []
+description = "Compute SHA-256 digest of input; returns lowercase hex string"
+
+[[functions]]
+name        = "_crypto_hash_sha512"
+layer       = 2
+category    = "crypto"
+module      = "env"
+params      = ["string"]
+returns     = "ptr"
+aliases     = []
+description = "Compute SHA-512 digest of input; returns lowercase hex string"
+
+[[functions]]
+name        = "_crypto_hmac"
+layer       = 2
+category    = "crypto"
+module      = "env"
+params      = ["string", "string", "string"]
+returns     = "ptr"
+aliases     = []
+description = "Compute HMAC of data using key and algorithm ('sha256' or 'sha512'); returns hex string"
+
+# ============================================================
+# LAYER 2 - JWT (3 functions, all canonical)
+# ============================================================
+
+[[functions]]
+name        = "_jwt_sign"
+layer       = 2
+category    = "jwt"
+module      = "env"
+params      = ["string", "string", "string"]
+returns     = "ptr"
+aliases     = []
+description = "Sign a JSON payload with secret and algorithm (e.g., 'HS256'); returns JWT token string"
+
+[[functions]]
+name        = "_jwt_verify"
+layer       = 2
+category    = "jwt"
+module      = "env"
+params      = ["string", "string", "string"]
+returns     = "ptr"
+aliases     = []
+description = "Verify JWT token with secret; returns payload JSON on success, empty string on failure"
+
+[[functions]]
+name        = "_jwt_decode"
+layer       = 2
+category    = "jwt"
+module      = "env"
+params      = ["string"]
+returns     = "ptr"
+aliases     = []
+description = "Decode JWT without signature verification; returns JSON with header and payload fields"
+
+# ============================================================
+# LAYER 2 - ENVIRONMENT (1 function)
+# ============================================================
+
+[[functions]]
+name        = "_env_get"
+layer       = 2
+category    = "env"
+module      = "env"
+params      = ["string"]
+returns     = "ptr"
+aliases     = []
+description = "Get environment variable by name; returns empty string if not found or access is denied"
+
+# ============================================================
+# LAYER 2 - TIME (1 function)
+# ============================================================
+
+[[functions]]
+name        = "_time_now"
+layer       = 2
+category    = "time"
+module      = "env"
+params      = []
+returns     = "i64"
+aliases     = []
+description = "Get current Unix timestamp in seconds since epoch as i64"
+
+# ============================================================
+# LAYER 2 - MEMORY RUNTIME (5 functions)
+# module = "memory_runtime" (not "env")
+# ============================================================
+
+[[functions]]
+name        = "mem_alloc"
+layer       = 2
+category    = "memory"
+module      = "memory_runtime"
+params      = ["i32", "i32"]
+returns     = "i32"
+aliases     = []
+description = "Allocate size bytes with given alignment in WASM linear memory; returns pointer or 0 on failure"
+
+[[functions]]
+name        = "mem_retain"
+layer       = 2
+category    = "memory"
+module      = "memory_runtime"
+params      = ["i32"]
+returns     = "void"
+aliases     = []
+description = "Increment reference count for pointer (no-op for bump allocator)"
+
+[[functions]]
+name        = "mem_release"
+layer       = 2
+category    = "memory"
+module      = "memory_runtime"
+params      = ["i32"]
+returns     = "void"
+aliases     = []
+description = "Decrement reference count for pointer (no-op for bump allocator)"
+
+[[functions]]
+name        = "mem_scope_push"
+layer       = 2
+category    = "memory"
+module      = "memory_runtime"
+params      = []
+returns     = "void"
+aliases     = []
+description = "Push a new memory scope for scope-based allocation tracking (no-op currently)"
+
+[[functions]]
+name        = "mem_scope_pop"
+layer       = 2
+category    = "memory"
+module      = "memory_runtime"
+params      = []
+returns     = "void"
+aliases     = []
+description = "Pop the current memory scope and free all allocations within it (no-op currently)"
+
+# ============================================================
+# LAYER 3 - HTTP SERVER (3 functions)
+# Server-only: not portable to non-server hosts
+# ============================================================
+
+[[functions]]
+name        = "_http_listen"
+layer       = 3
+category    = "http_server"
+module      = "env"
+params      = ["i32"]
+returns     = "i32"
+aliases     = []
+description = "Configure HTTP server to listen on given port; returns 0 on success"
+
+[[functions]]
+name        = "_http_route"
+layer       = 3
+category    = "http_server"
+module      = "env"
+params      = ["string", "string", "i32"]
+returns     = "i32"
+aliases     = []
+description = "Register public route: method (ptr+len), path pattern (ptr+len), and handler table index; returns 0 on success"
+
+[[functions]]
+name        = "_http_route_protected"
+layer       = 3
+category    = "http_server"
+module      = "env"
+params      = ["string", "string", "i32", "string"]
+returns     = "i32"
+aliases     = []
+description = "Register authentication-required route: method (ptr+len), path pattern (ptr+len), handler table index, role constraint (ptr+len); returns 0 on success"
+
+[[functions]]
+name        = "_http_serve_static"
+layer       = 3
+category    = "http_server"
+module      = "env"
+params      = ["string", "string"]
+returns     = "boolean"
+aliases     = []
+description = "Mount filesystem directory (ptr+len) as static file server at URL prefix (ptr+len); returns true on success"
+
+[[functions]]
+name        = "_island_register"
+layer       = 3
+category    = "http_server"
+module      = "env"
+params      = ["string", "string", "string"]
+returns     = "i32"
+aliases     = []
+description = "Register an island component for client-side hydration: component name (ptr+len), WASM module path (ptr+len), hydration mode (ptr+len: on|visible|idle|only); returns 0 on success"
+
+# ============================================================
+# LAYER 3 - REQUEST CONTEXT (11 functions)
+# ============================================================
+
+[[functions]]
+name        = "_req_param"
+layer       = 3
+category    = "request"
+module      = "env"
+params      = ["string"]
+returns     = "ptr"
+aliases     = []
+description = "Get URL path parameter by name (ptr+len) from current request; returns length-prefixed string"
+
+[[functions]]
+name        = "_req_param_int"
+layer       = 3
+category    = "request"
+module      = "env"
+params      = ["string"]
+returns     = "i32"
+aliases     = []
+description = "Get URL path parameter by name (ptr+len) parsed as i32; returns 0 if missing or not parseable"
+
+[[functions]]
+name        = "_req_query"
+layer       = 3
+category    = "request"
+module      = "env"
+params      = ["string"]
+returns     = "ptr"
+aliases     = []
+description = "Get query string parameter by name (ptr+len) from current request; returns length-prefixed string"
+
+[[functions]]
+name        = "_req_body"
+layer       = 3
+category    = "request"
+module      = "env"
+params      = []
+returns     = "ptr"
+aliases     = []
+description = "Get full raw request body; returns length-prefixed string"
+
+[[functions]]
+name        = "_req_body_field"
+layer       = 3
+category    = "request"
+module      = "env"
+params      = ["string"]
+returns     = "ptr"
+aliases     = []
+description = "Get a named field (ptr+len) from a JSON request body; returns length-prefixed string"
+
+[[functions]]
+name        = "_req_header"
+layer       = 3
+category    = "request"
+module      = "env"
+params      = ["string"]
+returns     = "ptr"
+aliases     = []
+description = "Get request header by name (ptr+len, case-insensitive); returns length-prefixed string"
+
+[[functions]]
+name        = "_req_headers"
+layer       = 3
+category    = "request"
+module      = "env"
+params      = []
+returns     = "ptr"
+aliases     = []
+description = "Get all request headers as a JSON object string; returns length-prefixed string"
+
+[[functions]]
+name        = "_req_method"
+layer       = 3
+category    = "request"
+module      = "env"
+params      = []
+returns     = "ptr"
+aliases     = []
+description = "Get HTTP method of current request (e.g., 'GET', 'POST'); returns length-prefixed string"
+
+[[functions]]
+name        = "_req_path"
+layer       = 3
+category    = "request"
+module      = "env"
+params      = []
+returns     = "ptr"
+aliases     = []
+description = "Get URL path of current request; returns length-prefixed string"
+
+[[functions]]
+name        = "_req_cookie"
+layer       = 3
+category    = "request"
+module      = "env"
+params      = ["string"]
+returns     = "ptr"
+aliases     = []
+description = "Get cookie value by name (ptr+len) from the Cookie request header; returns length-prefixed string"
+
+[[functions]]
+name        = "_req_form"
+layer       = 3
+category    = "request"
+module      = "env"
+params      = []
+returns     = "ptr"
+aliases     = []
+description = "Parse form-urlencoded request body and return as JSON object string"
+
+[[functions]]
+name        = "_req_ip"
+layer       = 3
+category    = "request"
+module      = "env"
+params      = []
+returns     = "ptr"
+aliases     = []
+description = "Get client IP address; checks X-Forwarded-For then X-Real-IP; returns 'unknown' if unavailable"
+
+# ============================================================
+# LAYER 3 - SESSION MANAGEMENT (7 functions)
+# ============================================================
+
+[[functions]]
+name        = "_session_store"
+layer       = 3
+category    = "session"
+module      = "env"
+params      = ["i32", "i32", "i32", "i32", "i32"]
+returns     = "boolean"
+aliases     = []
+description = "Store key-value pair under session ID; params: session_id_ptr, key_ptr, value_ptr, ttl, flags"
+
+[[functions]]
+name        = "_session_get"
+layer       = 3
+category    = "session"
+module      = "env"
+params      = []
+returns     = "ptr"
+aliases     = []
+description = "Get current session data from request context; returns session data as length-prefixed string"
+
+[[functions]]
+name        = "_session_delete"
+layer       = 3
+category    = "session"
+module      = "env"
+params      = []
+returns     = "boolean"
+aliases     = []
+description = "Delete current session from request context; returns 1 if deleted, 0 if not found"
+
+[[functions]]
+name        = "_session_exists"
+layer       = 3
+category    = "session"
+module      = "env"
+params      = ["string"]
+returns     = "boolean"
+aliases     = []
+description = "Check if a session with given ID (ptr+len) exists; returns 1 if it does, 0 otherwise"
+
+[[functions]]
+name        = "_session_set_csrf"
+layer       = 3
+category    = "session"
+module      = "env"
+params      = ["string"]
+returns     = "boolean"
+aliases     = []
+description = "Store CSRF token (ptr+len) for the current session; returns 1 on success, 0 if no active session"
+
+[[functions]]
+name        = "_session_get_csrf"
+layer       = 3
+category    = "session"
+module      = "env"
+params      = []
+returns     = "ptr"
+aliases     = []
+description = "Get CSRF token for the current session; returns empty string if no active session"
+
+[[functions]]
+name        = "_http_set_cookie"
+layer       = 3
+category    = "session"
+module      = "env"
+params      = ["i32", "i32"]
+returns     = "boolean"
+aliases     = []
+description = "Set a response cookie with name and value (length-prefixed pointers); applies default attributes"
+
+# ============================================================
+# LAYER 3 - AUTH (8 functions)
+# ============================================================
+
+[[functions]]
+name        = "_auth_get_session"
+layer       = 3
+category    = "auth"
+module      = "env"
+params      = []
+returns     = "ptr"
+aliases     = []
+description = "Get current auth session as JSON with user_id, role, session_id; returns 'null' if unauthenticated"
+
+[[functions]]
+name        = "_auth_require_auth"
+layer       = 3
+category    = "auth"
+module      = "env"
+params      = []
+returns     = "boolean"
+aliases     = []
+description = "Check if request is authenticated; returns 1 if authenticated, 0 otherwise"
+
+[[functions]]
+name        = "_auth_require_role"
+layer       = 3
+category    = "auth"
+module      = "env"
+params      = ["string"]
+returns     = "boolean"
+aliases     = []
+description = "Check if authenticated user has exactly the given role (ptr+len); returns 1 if yes, 0 otherwise"
+
+[[functions]]
+name        = "_auth_can"
+layer       = 3
+category    = "auth"
+module      = "env"
+params      = ["string"]
+returns     = "boolean"
+aliases     = []
+description = "Check if authenticated user has the given permission (ptr+len); admin role passes all permissions"
+
+[[functions]]
+name        = "_auth_has_any_role"
+layer       = 3
+category    = "auth"
+module      = "env"
+params      = ["string"]
+returns     = "boolean"
+aliases     = []
+description = "Check if user has any role from a JSON array of role strings (ptr+len); returns 1 if match found"
+
+[[functions]]
+name        = "_auth_set_session"
+layer       = 3
+category    = "auth"
+module      = "env"
+params      = ["string"]
+returns     = "boolean"
+aliases     = []
+description = "Create session from JSON with user_id, role, claims (ptr+len); sets session cookie on response"
+
+[[functions]]
+name        = "_auth_clear_session"
+layer       = 3
+category    = "auth"
+module      = "env"
+params      = []
+returns     = "boolean"
+aliases     = []
+description = "Destroy current user session and clear session cookie; returns 1 on success, 0 if no session"
+
+[[functions]]
+name        = "_auth_user_id"
+layer       = 3
+category    = "auth"
+module      = "env"
+params      = []
+returns     = "i32"
+aliases     = []
+description = "Get current authenticated user ID as i32; returns 0 if not authenticated"
+
+[[functions]]
+name        = "_auth_user_role"
+layer       = 3
+category    = "auth"
+module      = "env"
+params      = []
+returns     = "ptr"
+aliases     = []
+description = "Get current authenticated user role as length-prefixed string; returns empty if unauthenticated"
+
+# ============================================================
+# LAYER 3 - ROLES (3 functions)
+# ============================================================
+
+[[functions]]
+name        = "_roles_register"
+layer       = 3
+category    = "roles"
+module      = "env"
+params      = ["string"]
+returns     = "boolean"
+aliases     = []
+description = "Register role definitions from JSON object (ptr+len) mapping role names to permission arrays"
+
+[[functions]]
+name        = "_role_has_permission"
+layer       = 3
+category    = "roles"
+module      = "env"
+params      = ["string", "string"]
+returns     = "boolean"
+aliases     = []
+description = "Check if a named role (ptr+len) has a specific permission (ptr+len); returns 1 if yes, 0 otherwise"
+
+[[functions]]
+name        = "_role_get_permissions"
+layer       = 3
+category    = "roles"
+module      = "env"
+params      = ["string"]
+returns     = "ptr"
+aliases     = []
+description = "Get all permissions for a role (ptr+len) as a JSON array string; returns '[]' if role not found"
+
+# ============================================================
+# LAYER 3 - RESPONSE (10 functions)
+# ============================================================
+
+[[functions]]
+name        = "_http_respond"
+layer       = 3
+category    = "response"
+module      = "env"
+params      = ["i32", "string", "string"]
+returns     = "ptr"
+aliases     = []
+description = "Set response status, Content-Type header (ptr+len), and body (ptr+len) in one call; returns body pointer"
+
+[[functions]]
+name        = "_http_redirect"
+layer       = 3
+category    = "response"
+module      = "env"
+params      = ["i32", "string"]
+returns     = "ptr"
+aliases     = []
+description = "Send redirect response with given HTTP status and Location URL (ptr+len)"
+
+[[functions]]
+name        = "_http_set_header"
+layer       = 3
+category    = "response"
+module      = "env"
+params      = ["string", "string"]
+returns     = "ptr"
+aliases     = []
+description = "Set a response header by name (ptr+len) and value (ptr+len); returns header name pointer"
+
+[[functions]]
+name        = "_res_set_header"
+layer       = 3
+category    = "response"
+module      = "env"
+params      = ["string", "string"]
+returns     = "boolean"
+aliases     = []
+description = "Set a custom response header by name (ptr+len) and value (ptr+len); returns 1 on success, 0 on error"
+
+[[functions]]
+name        = "_res_redirect"
+layer       = 3
+category    = "response"
+module      = "env"
+params      = ["string", "i32"]
+returns     = "boolean"
+aliases     = []
+description = "Set redirect to URL (ptr+len) with status code (301/302/303/307/308); invalid codes default to 302"
+
+[[functions]]
+name        = "_res_status"
+layer       = 3
+category    = "response"
+module      = "env"
+params      = ["i32"]
+returns     = "void"
+aliases     = []
+description = "Set HTTP response status code"
+
+[[functions]]
+name        = "_res_body"
+layer       = 3
+category    = "response"
+module      = "env"
+params      = ["string"]
+returns     = "void"
+aliases     = []
+description = "Set raw response body from ptr+len pair"
+
+[[functions]]
+name        = "_res_json"
+layer       = 3
+category    = "response"
+module      = "env"
+params      = ["string"]
+returns     = "void"
+aliases     = []
+description = "Set JSON response body from ptr+len pair and automatically sets Content-Type: application/json header"
+
+[[functions]]
+name        = "_http_set_cache"
+layer       = 3
+category    = "response"
+module      = "env"
+params      = ["i32"]
+returns     = "boolean"
+aliases     = []
+description = "Set Cache-Control max-age in seconds; 0 or negative sets no-cache headers"
+
+[[functions]]
+name        = "_http_no_cache"
+layer       = 3
+category    = "response"
+module      = "env"
+params      = []
+returns     = "boolean"
+aliases     = []
+description = "Set Cache-Control, Pragma, and Expires headers to disable all caching"
+
+# ============================================================
+# LAYER 3 - JSON UTILITIES (3 functions)
+# ============================================================
+
+[[functions]]
+name        = "_json_encode"
+layer       = 3
+category    = "json"
+module      = "env"
+params      = ["string"]
+returns     = "ptr"
+aliases     = []
+description = "Validate and re-serialize JSON from ptr+len pair; non-JSON strings are encoded as JSON string values"
+
+[[functions]]
+name        = "_json_decode"
+layer       = 3
+category    = "json"
+module      = "env"
+params      = ["string"]
+returns     = "ptr"
+aliases     = []
+description = "Parse JSON string from ptr+len pair; returns parsed JSON or an error JSON object on parse failure"
+
+[[functions]]
+name        = "_json_get"
+layer       = 3
+category    = "json"
+module      = "env"
+params      = ["string", "string"]
+returns     = "ptr"
+aliases     = []
+description = "Extract a value from a JSON object (ptr+len) using a dot-separated path (ptr+len, e.g., 'user.name')"

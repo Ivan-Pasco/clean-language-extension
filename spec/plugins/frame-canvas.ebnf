@@ -1,0 +1,417 @@
+(* ============================================================================ *)
+(* frame-canvas Plugin Grammar — EBNF Specification                           *)
+(* Plugin:  frame-canvas                                                      *)
+(* Version: 1.0.0                                                             *)
+(* Date:    2026-04-12                                                        *)
+(* Extends: Clean Language core grammar (spec/grammar.ebnf)                  *)
+(*                                                                            *)
+(* This file specifies the syntax extensions introduced by the frame-canvas   *)
+(* plugin. It defines the canvasScene block, per-frame lifecycle hooks,       *)
+(* event handler blocks, the drawing API, asset loading, audio, input,        *)
+(* animation, collision detection, camera control, easing functions, and      *)
+(* scene management.                                                          *)
+(*                                                                            *)
+(* All core grammar productions (expression, identifier, type, statement,     *)
+(* string_literal, etc.) are inherited from spec/grammar.ebnf without        *)
+(* redefinition.                                                              *)
+(* ============================================================================ *)
+
+
+(* ======================================================================== *)
+(* 1. CANVAS SCENE BLOCK                                                    *)
+(* ======================================================================== *)
+
+(* canvasScene is the top-level container for a 2D canvas application.     *)
+(* Dimension attributes (width, height) may be integer literals or         *)
+(* identifier references to constants.                                     *)
+
+canvas_scene_block  = "canvasScene" , ":" , canvas_scene_attrs , NEWLINE
+                    , INDENT , { canvas_scene_section } ;
+
+canvas_scene_attrs  = { canvas_attr } ;
+
+canvas_attr         = canvas_width_attr
+                    | canvas_height_attr
+                    | canvas_fps_attr
+                    | canvas_background_attr ;
+
+canvas_width_attr   = "width"      , "=" , integer_expression ;
+canvas_height_attr  = "height"     , "=" , integer_expression ;
+canvas_fps_attr     = "fps"        , "=" , integer_expression ;
+
+(* background accepts a CSS color string or a color constant identifier.   *)
+canvas_background_attr
+                    = "background" , "=" , ( string_literal | identifier ) ;
+
+integer_expression  = integer_literal | identifier ;
+
+canvas_scene_section
+                    = assets_section
+                    | init_section
+                    | draw_section
+                    | on_frame_handler
+                    | on_pointer_down_handler
+                    | on_pointer_move_handler
+                    | on_key_down_handler ;
+
+
+(* ======================================================================== *)
+(* 2. ASSETS SECTION                                                        *)
+(* ======================================================================== *)
+
+(* assets_section loads all media resources before the scene starts.       *)
+(* Calls to sprite.load and audio.load* inside this block are guaranteed   *)
+(* to complete before init: executes.                                       *)
+
+assets_section      = "assets" , ":" , NEWLINE
+                    , INDENT , INDENT , { asset_load_statement , NEWLINE } ;
+
+asset_load_statement
+                    = sprite_load_call
+                    | audio_load_sound_call
+                    | audio_load_music_call ;
+
+(* sprite.load("path", frameWidth, frameHeight) — loads a sprite sheet.   *)
+sprite_load_call    = "sprite" , "." , "load"
+                    , "(" , string_literal
+                    , "," , expression
+                    , "," , expression , ")" ;
+
+(* audio.loadSound("path") — loads a short sound effect into memory.      *)
+audio_load_sound_call
+                    = "audio" , "." , "loadSound" , "(" , string_literal , ")" ;
+
+(* audio.loadMusic("path") — streams a background music track.            *)
+audio_load_music_call
+                    = "audio" , "." , "loadMusic" , "(" , string_literal , ")" ;
+
+
+(* ======================================================================== *)
+(* 3. LIFECYCLE SECTIONS                                                    *)
+(* ======================================================================== *)
+
+(* --- 3.1 Init Section --- *)
+
+(* init runs once when the scene is first entered. Use it to reset state   *)
+(* variables, position entities, and start any initial animations.         *)
+
+init_section        = "init" , ":" , NEWLINE
+                    , INDENT , INDENT , { statement } ;
+
+
+(* --- 3.2 Draw Section --- *)
+
+(* draw runs every frame after update logic. It should contain only canvas  *)
+(* drawing calls; game state should be mutated in on_frame handlers.       *)
+
+draw_section        = "draw" , ":" , NEWLINE
+                    , INDENT , INDENT , { draw_statement } ;
+
+draw_statement      = canvas_call
+                    | sprite_draw_call
+                    | statement ;
+
+
+(* ======================================================================== *)
+(* 4. EVENT HANDLER BLOCKS                                                  *)
+(* ======================================================================== *)
+
+(* --- 4.1 onFrame --- *)
+
+(* onFrame runs once per animation frame. The optional param attribute      *)
+(* names the delta-time variable injected into the block body.              *)
+
+on_frame_handler    = "onFrame" , [ on_frame_params ] , ":" , NEWLINE
+                    , INDENT , INDENT , { statement } ;
+
+on_frame_params     = "param" , "=" , string_literal ;  (* e.g. param="dt" *)
+
+
+(* --- 4.2 onPointerDown --- *)
+
+(* onPointerDown fires on mouse press or touch start.                      *)
+
+on_pointer_down_handler
+                    = "onPointerDown" , [ pointer_params ] , ":" , NEWLINE
+                    , INDENT , INDENT , { statement } ;
+
+pointer_params      = "params" , "=" , string_literal ; (* e.g. params="x,y" *)
+
+
+(* --- 4.3 onPointerMove --- *)
+
+on_pointer_move_handler
+                    = "onPointerMove" , [ pointer_params ] , ":" , NEWLINE
+                    , INDENT , INDENT , { statement } ;
+
+
+(* --- 4.4 onKeyDown --- *)
+
+on_key_down_handler = "onKeyDown" , [ key_params ] , ":" , NEWLINE
+                    , INDENT , INDENT , { statement } ;
+
+key_params          = "params" , "=" , string_literal ; (* e.g. params="key" *)
+
+
+(* ======================================================================== *)
+(* 5. DRAWING API CALLS                                                     *)
+(* ======================================================================== *)
+
+(* All drawing calls are methods on the implicit "canvas" object.          *)
+
+canvas_call         = "canvas" , "." , canvas_method ;
+
+canvas_method       = canvas_clear
+                    | canvas_circle
+                    | canvas_circle_filled
+                    | canvas_rect
+                    | canvas_rect_filled
+                    | canvas_line
+                    | canvas_text
+                    | canvas_image ;
+
+(* canvas.clear — erases the entire drawing surface.                       *)
+canvas_clear        = "clear" ;
+
+(* canvas.circle(x, y, radius, color) — outline circle.                   *)
+canvas_circle       = "circle"
+                    , "(" , expression , "," , expression
+                    , "," , expression , "," , expression , ")" ;
+
+(* canvas.circleFilled(x, y, radius, color) — filled circle.              *)
+canvas_circle_filled
+                    = "circleFilled"
+                    , "(" , expression , "," , expression
+                    , "," , expression , "," , expression , ")" ;
+
+(* canvas.rect(x, y, w, h, color) — outline rectangle.                    *)
+canvas_rect         = "rect"
+                    , "(" , expression , "," , expression
+                    , "," , expression , "," , expression
+                    , "," , expression , ")" ;
+
+(* canvas.rectFilled(x, y, w, h, color) — filled rectangle.               *)
+canvas_rect_filled  = "rectFilled"
+                    , "(" , expression , "," , expression
+                    , "," , expression , "," , expression
+                    , "," , expression , ")" ;
+
+(* canvas.line(x1, y1, x2, y2, color) — straight line.                    *)
+canvas_line         = "line"
+                    , "(" , expression , "," , expression
+                    , "," , expression , "," , expression
+                    , "," , expression , ")" ;
+
+(* canvas.text(text, x, y, size, color) — renders a string.               *)
+canvas_text         = "text"
+                    , "(" , expression , "," , expression
+                    , "," , expression , "," , expression
+                    , "," , expression , ")" ;
+
+(* canvas.image(src, x, y, w, h) — draws an image or sprite frame.        *)
+canvas_image        = "image"
+                    , "(" , expression , "," , expression
+                    , "," , expression , "," , expression
+                    , "," , expression , ")" ;
+
+
+(* ======================================================================== *)
+(* 6. SPRITE API CALLS                                                      *)
+(* ======================================================================== *)
+
+sprite_draw_call    = "sprite" , "." , sprite_method ;
+
+sprite_method       = sprite_draw ;
+
+(* sprite.draw(id, frame, x, y, w, h) — draws one animation frame.        *)
+sprite_draw         = "draw"
+                    , "(" , expression , "," , expression
+                    , "," , expression , "," , expression
+                    , "," , expression , "," , expression , ")" ;
+
+
+(* ======================================================================== *)
+(* 7. AUDIO API CALLS                                                       *)
+(* ======================================================================== *)
+
+audio_call          = "audio" , "." , audio_method ;
+
+audio_method        = audio_play_call
+                    | audio_play_music_call
+                    | audio_stop_music_call ;
+
+(* audio.play(id) — plays a previously loaded sound effect.                *)
+audio_play_call     = "play"       , "(" , expression , ")" ;
+
+(* audio.playMusic(id) — starts streaming a loaded music track.            *)
+audio_play_music_call
+                    = "playMusic"  , "(" , expression , ")" ;
+
+(* audio.stopMusic() — stops the currently playing music track.            *)
+audio_stop_music_call
+                    = "stopMusic"  , "(" , ")" ;
+
+
+(* ======================================================================== *)
+(* 8. INPUT API EXPRESSIONS                                                 *)
+(* ======================================================================== *)
+
+(* Input reads are expressions that return current input state.            *)
+
+input_expression    = "input" , "." , input_property ;
+
+input_property      = "mouseX"
+                    | "mouseY"
+                    | key_down_check
+                    | key_just_pressed_check ;
+
+(* input.keyDown(key) — true while the key is held.                       *)
+key_down_check      = "keyDown"         , "(" , expression , ")" ;
+
+(* input.keyJustPressed(key) — true only on the first frame the key fires. *)
+key_just_pressed_check
+                    = "keyJustPressed"  , "(" , expression , ")" ;
+
+
+(* ======================================================================== *)
+(* 9. ANIMATION TIMER FUNCTIONS                                             *)
+(* ======================================================================== *)
+
+(* These functions are free-standing (not namespaced) inside a canvasScene. *)
+
+animation_function_call
+                    = delta_time_call
+                    | time_call
+                    | fps_call ;
+
+delta_time_call     = "deltaTime" , "(" , ")" ;
+time_call           = "time"      , "(" , ")" ;
+fps_call            = "fps"       , "(" , ")" ;
+
+
+(* ======================================================================== *)
+(* 10. COLLISION DETECTION API                                              *)
+(* ======================================================================== *)
+
+collision_call      = "collision" , "." , collision_method ;
+
+collision_method    = collision_circle_circle
+                    | collision_rect_rect
+                    | collision_point_rect ;
+
+(* collision.circleCircle(x1, y1, r1, x2, y2, r2) — boolean.              *)
+collision_circle_circle
+                    = "circleCircle"
+                    , "(" , expression , "," , expression , "," , expression
+                    , "," , expression , "," , expression , "," , expression , ")" ;
+
+(* collision.rectRect(x1, y1, w1, h1, x2, y2, w2, h2) — boolean.          *)
+collision_rect_rect = "rectRect"
+                    , "(" , expression , "," , expression
+                    , "," , expression , "," , expression
+                    , "," , expression , "," , expression
+                    , "," , expression , "," , expression , ")" ;
+
+(* collision.pointRect(px, py, rx, ry, rw, rh) — boolean.                 *)
+collision_point_rect
+                    = "pointRect"
+                    , "(" , expression , "," , expression
+                    , "," , expression , "," , expression
+                    , "," , expression , "," , expression , ")" ;
+
+
+(* ======================================================================== *)
+(* 11. CAMERA API                                                           *)
+(* ======================================================================== *)
+
+camera_call         = "camera" , "." , camera_method ;
+
+camera_method       = camera_set_position
+                    | camera_set_zoom
+                    | camera_shake ;
+
+(* camera.setPosition(x, y) — moves the camera viewport.                  *)
+camera_set_position = "setPosition" , "(" , expression , "," , expression , ")" ;
+
+(* camera.setZoom(scale) — sets the zoom factor (1.0 = no zoom).           *)
+camera_set_zoom     = "setZoom"     , "(" , expression , ")" ;
+
+(* camera.shake(intensity, duration) — applies a screen shake effect.      *)
+camera_shake        = "shake"       , "(" , expression , "," , expression , ")" ;
+
+
+(* ======================================================================== *)
+(* 12. EASING FUNCTIONS                                                     *)
+(* ======================================================================== *)
+
+(* Easing functions map a normalized time value t (0.0–1.0) to an eased    *)
+(* output value. They are available as ease.<name>(t).                     *)
+
+ease_call           = "ease" , "." , ease_function ;
+
+ease_function       = ease_linear
+                    | ease_in_quad
+                    | ease_out_quad
+                    | ease_in_out_quad ;
+
+ease_linear         = "linear"     , "(" , expression , ")" ;
+ease_in_quad        = "inQuad"     , "(" , expression , ")" ;
+ease_out_quad       = "outQuad"    , "(" , expression , ")" ;
+ease_in_out_quad    = "inOutQuad"  , "(" , expression , ")" ;
+
+
+(* ======================================================================== *)
+(* 13. SCENE MANAGEMENT                                                     *)
+(* ======================================================================== *)
+
+(* Scene functions navigate between named canvasScene blocks.              *)
+
+scene_call          = "scene" , "." , scene_method ;
+
+scene_method        = scene_change
+                    | scene_push
+                    | scene_pop
+                    | scene_current ;
+
+(* scene.change(name) — replaces the current scene (clears stack).         *)
+scene_change        = "change"  , "(" , ( string_literal | identifier ) , ")" ;
+
+(* scene.push(name) — pushes a new scene on top, pausing the current one.  *)
+scene_push          = "push"    , "(" , ( string_literal | identifier ) , ")" ;
+
+(* scene.pop() — returns to the previous scene on the stack.               *)
+scene_pop           = "pop"     , "(" , ")" ;
+
+(* scene.current() — returns the name of the currently active scene.      *)
+scene_current       = "current" , "(" , ")" ;
+
+
+(* ======================================================================== *)
+(* 14. BUILT-IN TYPES                                                       *)
+(* ======================================================================== *)
+
+(* These types are injected into scope by the frame-canvas plugin.         *)
+
+canvas_plugin_type  = "Canvas"
+                    | "Sprite"
+                    | "Sound"
+                    | "Music"
+                    | "Image" ;
+
+
+(* ======================================================================== *)
+(* 15. INTEGRATION WITH CORE GRAMMAR                                        *)
+(* ======================================================================== *)
+
+(* top_level_declaration (core) is extended to also accept:                 *)
+(*   canvas_scene_block                                                     *)
+
+(* expression (core) is extended to also accept:                            *)
+(*   canvas_call | sprite_draw_call | audio_call | input_expression        *)
+(*   | animation_function_call | collision_call | camera_call              *)
+(*   | ease_call | scene_call                                               *)
+
+(* statement (core) is extended to also accept:                             *)
+(*   draw_statement | asset_load_statement                                  *)
+
+(* type (core) is extended to also accept: canvas_plugin_type              *)

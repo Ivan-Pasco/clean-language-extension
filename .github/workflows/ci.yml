@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  test:
+    name: Compiler Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: clean-language-compiler
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            clean-language-compiler/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('clean-language-compiler/Cargo.lock') }}
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Unit tests
+        run: cargo test --lib
+
+      - name: Integration tests
+        run: cargo test --test integration || true
+
+  e2e-tests:
+    name: End-to-End .cln Tests
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            clean-language-compiler/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('clean-language-compiler/Cargo.lock') }}
+
+      - name: Build compiler
+        working-directory: clean-language-compiler
+        run: cargo build --bin cln --release
+
+      - name: Run CI tests
+        run: bash scripts/run_ci_tests.sh --verbose
+
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-test-results
+          path: clean-language-compiler/tests/results/

@@ -181,7 +181,7 @@ This document defines the authoritative execution layer architecture for the Cle
 | Constants | `math_pi`, `math_e` |
 | Random | `math_random` |
 
-### String Operations (25+ functions)
+### String Operations (27+ functions)
 | Function | Description |
 |----------|-------------|
 | `string_concat` | Concatenate two strings |
@@ -199,6 +199,8 @@ This document defines the authoritative execution layer architecture for the Cle
 | `string_to_int` | Parse integer |
 | `string_to_float` | Parse float |
 | `string_to_bool` | Parse boolean |
+| `_html_escape` | Escape HTML entities in string |
+| `_html_raw` | Pass-through for raw HTML insertion |
 
 ### File I/O (5 functions)
 | Function | Signature | Description |

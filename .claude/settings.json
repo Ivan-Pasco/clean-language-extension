@@ -1,0 +1,149 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mv system-documents/PROJECT_MANAGEMENT_PRINCIPLES.md management/)",
+      "Bash(mv system-documents/ARCHITECTURE_BOUNDARIES.md management/)",
+      "Bash(mv system-documents/cross-component-prompts/* management/cross-component-prompts/)",
+      "Bash(rmdir system-documents/cross-component-prompts)",
+      "Bash(mv PROMPT-CLEEN-MANAGER.md management/component-prompts/)",
+      "Bash(mv COMPREHENSIVE_PROJECT_REVIEW.md management/reports/)",
+      "Bash(mv GEMINI.md management/reports/)",
+      "Bash(mv system-documents/EXECUTION_LAYER_COMPLIANCE_REPORT.md management/reports/)",
+      "Bash(mv system-documents/DYNAMIC-OPTIONS-IMPLEMENTATION-GUIDE.md management/reports/)",
+      "Bash(mv system-documents/DYNAMIC-OPTIONS-IMPLEMENTATION-SUMMARY.md management/reports/)",
+      "WebSearch",
+      "Bash(claude config:*)",
+      "Bash(claude --version)",
+      "Bash(/Users/earcandy/.local/bin/claude config:*)",
+      "Edit(/.claude/skills/health/**)",
+      "Edit(/.claude/skills/upstream/**)",
+      "Edit(/.claude/skills/coverage/**)",
+      "Bash(chmod +x \"/Users/earcandy/Documents/Dev/Clean Language/scripts/session-health-check.sh\")",
+      "Edit(/.claude/skills/triage/**)",
+      "Edit(/.claude/skills/feature-status/**)",
+      "Edit(/.claude/skills/maturity/**)",
+      "Bash(bash scripts/run_ci_tests.sh)",
+      "Bash(CLEAN_DEBUG_MIR=1 cargo run --bin cln -- compile tests/cln/bugfixes/multiple_break_in_function.cln --output /tmp/multi_break_fn.wasm)",
+      "Bash(\"/Users/earcandy/Documents/Dev/Clean Language/clean-server/target/release/clean-server\" --help)",
+      "Bash(\"/Users/earcandy/Documents/Dev/Clean Language/clean-server/target/release/clean-server\" /tmp/multi_break_fn.wasm)",
+      "Bash(kill %1)",
+      "Bash(wait)",
+      "Bash(\"/Users/earcandy/Documents/Dev/Clean Language/clean-server/target/release/clean-server\" --port 3001 /tmp/multi_break_indexof.wasm)",
+      "Bash(chmod +x \"/Users/earcandy/Documents/Dev/Clean Language/scripts/run_wasm.sh\")",
+      "Bash(\"/Users/earcandy/Documents/Dev/Clean Language/scripts/run_wasm.sh\" /tmp/ci_t1_print_string.wasm 2)",
+      "Bash(bash scripts/run_ci_tests.sh --update-baseline)",
+      "Bash(npm run:*)",
+      "Bash(bash scripts/run_ci_tests.sh --update-baseline --verbose)",
+      "Bash(wc -l \"/Users/earcandy/Documents/Dev/Clean Language/clean-language-compiler/src/parser/token_parser/\"*.rs)",
+      "Bash(python3)",
+      "Bash(node ./out/test/runTests.js)",
+      "Bash(chmod +x \"/Users/earcandy/Documents/Dev/Clean Language/scripts/full-quality-gate.sh\")",
+      "Bash(bash scripts/full-quality-gate.sh --quick)",
+      "Bash(read d:*)",
+      "Bash([ -d \"$d.git\" ])"
+    ],
+    "additionalDirectories": [
+      "/Users/earcandy/Documents/Dev/Clean Language/.claude/skills",
+      "/Users/earcandy/Documents/Dev/Clean Language/.claude",
+      "/Users/earcandy/Documents/Dev/Clean Language/.git/hooks"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$PWD/scripts/session-health-check.sh\" 2>/dev/null || echo '{\"suppressOutput\": true}'",
+            "timeout": 120,
+            "statusMessage": "Running health check..."
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "The user is editing a file. Check if the file path in $ARGUMENTS is in a DIFFERENT component folder than the current working directory. Component folders are: clean-language-compiler/, clean-server/, clean-framework/, clean-extension/, clean-manager/, clean-canvas/, clean-ui/, clean-node-server/, clean-llm/, clean-cpanel-plugin/. Shared locations (spec/, management/, platform-architecture/, scripts/, .claude/, CLAUDE.md, TASKS.md) are ALLOWED from any component. If the edit crosses component boundaries (editing a file in clean-server/ while working in clean-language-compiler/), output JSON with decision block and reason. Otherwise allow."
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "The user is editing a test file in tests/cln/. Check $ARGUMENTS. If this edit WEAKENS the test (removing assertions, changing expected values to match broken output, commenting out failing checks), block it. Principle 5: Never modify tests to make them pass. Fix the compiler instead. Exception: if the test contradicts spec/grammar.ebnf, allow the fix. If the edit adds new tests, fixes spec compliance, or improves coverage, allow it.",
+            "if": "Edit(tests/cln/**)"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Principle 25 — Specification Change Control. The file being edited is a SPECIFICATION file (grammar.ebnf, semantic-rules.md, type-system.md, stdlib-reference.md, or a plugin EBNF). Check $ARGUMENTS. Spec changes require developer approval. If the edit is a typo fix, comment update, or formatting change, allow it. If the edit adds, removes, or modifies any production rule, semantic rule, type rule, function signature, or plugin syntax definition, BLOCK it with: the spec is a controlled document — ask the developer for approval before modifying it. Report what change is being attempted so the developer can decide.",
+            "if": "Edit(spec/**)"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$PWD/clean-language-compiler\" && cargo test --lib --quiet 2>&1 | tail -3 | jq -Rs '{\"hookSpecificOutput\": {\"hookEventName\": \"PostToolUse\", \"additionalContext\": (\"Rust unit tests: \" + .)}, \"suppressOutput\": true}' 2>/dev/null || echo '{\"suppressOutput\": true}'",
+            "if": "Edit(clean-language-compiler/src/**)",
+            "timeout": 120,
+            "statusMessage": "Running compiler tests...",
+            "async": true
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$PWD/clean-server\" && cargo check --quiet 2>&1 | tail -1 | jq -Rs '{\"hookSpecificOutput\": {\"hookEventName\": \"PostToolUse\", \"additionalContext\": (\"Server build: \" + .)}, \"suppressOutput\": true}' 2>/dev/null || echo '{\"suppressOutput\": true}'",
+            "if": "Edit(clean-server/src/**)",
+            "timeout": 120,
+            "statusMessage": "Checking server build...",
+            "async": true
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$PWD/clean-extension\" && npm run compile --silent 2>&1 | tail -1 | jq -Rs '{\"hookSpecificOutput\": {\"hookEventName\": \"PostToolUse\", \"additionalContext\": (\"Extension build: \" + .)}, \"suppressOutput\": true}' 2>/dev/null || echo '{\"suppressOutput\": true}'",
+            "if": "Edit(clean-extension/src/**)",
+            "timeout": 60,
+            "statusMessage": "Checking extension build...",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$PWD/scripts/full-quality-gate.sh\" --quick 2>&1 | jq -Rs '{\"systemMessage\": .}' 2>/dev/null || echo '{\"suppressOutput\": true}'",
+            "timeout": 300,
+            "statusMessage": "Running end-of-session quality gate..."
+          }
+        ]
+      }
+    ]
+  }
+}

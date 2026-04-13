@@ -1,0 +1,295 @@
+(* ============================================================================ *)
+(* frame-server Plugin Grammar — EBNF Specification                           *)
+(* Plugin:  frame-server                                                      *)
+(* Version: 1.0.0                                                             *)
+(* Date:    2026-04-12                                                        *)
+(* Extends: Clean Language core grammar (spec/grammar.ebnf)                  *)
+(*                                                                            *)
+(* This file specifies the syntax extensions introduced by the frame-server   *)
+(* plugin. It defines HTTP routing, middleware, guard, and response helpers.  *)
+(* All core grammar productions (expression, identifier, type, statement,     *)
+(* string_literal, etc.) are inherited from spec/grammar.ebnf without        *)
+(* redefinition.                                                              *)
+(* ============================================================================ *)
+
+
+(* ======================================================================== *)
+(* 1. TOP-LEVEL SERVER CONFIGURATION                                        *)
+(* ======================================================================== *)
+
+(* A server_config block appears at the top level of a .cln source file.    *)
+(* It configures the HTTP server before the endpoints block is declared.    *)
+
+server_config       = "server" , ":" , NEWLINE
+                    , INDENT , server_config_body ;
+
+server_config_body  = { server_config_field , NEWLINE } ;
+
+server_config_field = port_field
+                    | host_field
+                    | cors_field
+                    | rate_limit_field
+                    | middleware_field ;
+
+port_field          = "port" , "=" , integer_literal ;
+
+host_field          = "host" , "=" , string_literal ;
+
+(* cors_field configures Cross-Origin Resource Sharing. origins can be "*"  *)
+(* or a list of allowed origin strings.                                     *)
+cors_field          = "cors" , ":" , NEWLINE
+                    , INDENT , INDENT , cors_body ;
+
+cors_body           = { cors_option , NEWLINE } ;
+
+cors_option         = "origins" , "=" , ( string_literal | list_literal )
+                    | "methods"  , "=" , list_literal
+                    | "headers"  , "=" , list_literal
+                    | "credentials" , "=" , boolean_literal ;
+
+rate_limit_field    = "rateLimit" , ":" , NEWLINE
+                    , INDENT , INDENT , rate_limit_body ;
+
+rate_limit_body     = { rate_limit_option , NEWLINE } ;
+
+rate_limit_option   = "max"      , "=" , integer_literal
+                    | "window"   , "=" , integer_literal
+                    | "message"  , "=" , string_literal ;
+
+middleware_field    = "middleware" , "=" , list_literal ;
+
+
+(* ======================================================================== *)
+(* 2. ENDPOINTS BLOCK                                                       *)
+(* ======================================================================== *)
+
+(* The endpoints block is the primary extension introduced by frame-server.  *)
+(* It groups one or more route declarations under a shared indent level.    *)
+
+endpoints_block     = "endpoints" , ":" , NEWLINE
+                    , INDENT , { route_declaration } ;
+
+(* A route_declaration binds an HTTP method and URL pattern to a handler    *)
+(* body. The url_pattern may contain named segments prefixed with ":".      *)
+
+route_declaration   = http_method , url_pattern , ":" , NEWLINE
+                    , INDENT , INDENT , route_body ;
+
+http_method         = "GET"
+                    | "POST"
+                    | "PUT"
+                    | "PATCH"
+                    | "DELETE" ;
+
+(* url_pattern is a path string that may contain colon-prefixed segments    *)
+(* (named parameters) and wildcard "*" segments.                            *)
+url_pattern         = "/" , { url_segment , [ "/" ] } ;
+
+url_segment         = url_literal_segment
+                    | url_param_segment
+                    | url_wildcard_segment ;
+
+url_literal_segment = ALPHA , { ALPHANUMERIC | "-" | "_" } ;
+
+(* Named URL parameter, resolved at runtime via req.param("name").         *)
+url_param_segment   = ":" , identifier ;
+
+url_wildcard_segment
+                    = "*" ;
+
+
+(* ======================================================================== *)
+(* 3. ROUTE BODY                                                            *)
+(* ======================================================================== *)
+
+(* A route_body contains optional guard and cache directives followed by    *)
+(* one or more handler statements.                                          *)
+
+route_body          = [ guard_block ]
+                    , [ cache_directive ]
+                    , { route_statement } ;
+
+
+(* --- 3.1 Guard Block --- *)
+
+(* guard_block gates a route behind authorization checks. One or more       *)
+(* require clauses specify the roles or conditions that must be satisfied.  *)
+
+guard_block         = "guard" , ":" , NEWLINE
+                    , INDENT , INDENT , INDENT , { guard_clause , NEWLINE } ;
+
+guard_clause        = require_clause
+                    | guard_expression_clause ;
+
+require_clause      = "require" , ":" , role_expression ;
+
+(* role_expression is a role name identifier or a comma-separated list.    *)
+role_expression     = identifier , { "," , identifier } ;
+
+(* A free-form boolean expression can also serve as a guard condition.      *)
+guard_expression_clause
+                    = expression ;
+
+
+(* --- 3.2 Cache Directive --- *)
+
+cache_directive     = "cache" , ":" , cache_value ;
+
+cache_value         = integer_literal                        (* seconds *)
+                    | string_literal                         (* e.g. "5m" *)
+                    | "false" ;
+
+
+(* --- 3.3 Route Statements --- *)
+
+(* Route statements are the executable body of a handler. They include all  *)
+(* core statements plus server-specific return helpers.                     *)
+
+route_statement     = assignment_statement
+                    | return_response
+                    | handle_block
+                    | expression_statement
+                    | if_statement
+                    | iterate_statement
+                    | variable_declaration ;
+
+(* return_response is the primary way to emit an HTTP response from a       *)
+(* handler. It uses one of the response helper functions.                   *)
+return_response     = "return" , response_expression ;
+
+(* A response can also be produced with the "returns" keyword as a label    *)
+(* in a route declaration (purely documentary, not enforced at runtime).   *)
+returns_annotation  = "returns" , ":" , type ;
+
+
+(* ======================================================================== *)
+(* 4. RESPONSE HELPER EXPRESSIONS                                           *)
+(* ======================================================================== *)
+
+(* response_expression covers every built-in helper that produces an HTTP   *)
+(* response value. These are only valid as the argument to "return" inside  *)
+(* a route handler or as the right-hand side of an assignment.             *)
+
+response_expression = json_response
+                    | html_response
+                    | redirect_response
+                    | not_found_response
+                    | error_response
+                    | status_response
+                    | expression ;               (* fallback: plain value *)
+
+json_response       = "json" , "(" , expression , ")" ;
+
+html_response       = "html" , "(" , expression , ")" ;
+
+redirect_response   = "redirect" , "(" , expression
+                    , [ "," , integer_literal ] , ")" ;
+
+not_found_response  = "notFound" , "(" , [ expression ] , ")" ;
+
+error_response      = "error" , "(" , expression
+                    , [ "," , integer_literal ] , ")" ;
+
+(* status() wraps any response with a specific HTTP status code.           *)
+status_response     = "status" , "(" , integer_literal
+                    , "," , response_expression , ")" ;
+
+
+(* ======================================================================== *)
+(* 5. REQUEST CONTEXT ACCESS                                                *)
+(* ======================================================================== *)
+
+(* req_expression covers all methods available on the implicit "req" object *)
+(* inside a route handler. The req object is automatically in scope.       *)
+
+req_expression      = "req" , "." , req_method ;
+
+req_method          = req_param
+                    | req_query
+                    | req_header
+                    | req_body
+                    | req_form
+                    | req_cookie
+                    | req_method_prop
+                    | req_path ;
+
+(* req.param("name") retrieves a named URL segment value.                  *)
+req_param           = "param"  , "(" , string_literal , ")" ;
+
+(* req.query("name") retrieves a URL query-string parameter.               *)
+req_query           = "query"  , "(" , string_literal , ")" ;
+
+(* req.header("name") retrieves an HTTP request header value.              *)
+req_header          = "header" , "(" , string_literal , ")" ;
+
+(* req.body() deserializes the request body (JSON by default).             *)
+req_body            = "body"   , "(" , ")" ;
+
+(* req.form() retrieves form-encoded body fields.                          *)
+req_form            = "form"   , "(" , [ string_literal ] , ")" ;
+
+(* req.cookie("name") retrieves a named cookie value.                      *)
+req_cookie          = "cookie" , "(" , string_literal , ")" ;
+
+(* req.method is a string property (GET, POST, …).                        *)
+req_method_prop     = "method" ;
+
+(* req.path is the raw URL path string.                                    *)
+req_path            = "path" ;
+
+
+(* ======================================================================== *)
+(* 6. HANDLE BLOCK (error / fallback chaining)                              *)
+(* ======================================================================== *)
+
+(* handle_block allows inline error handling inside a route body, analogous *)
+(* to the core onError statement.                                           *)
+
+handle_block        = "handle" , ":" , NEWLINE
+                    , INDENT , INDENT , INDENT , { handle_clause , NEWLINE } ;
+
+handle_clause       = error_pattern , ":" , NEWLINE
+                    , INDENT , INDENT , INDENT , INDENT , { route_statement } ;
+
+error_pattern       = identifier
+                    | string_literal
+                    | "_" ;                     (* catch-all *)
+
+
+(* ======================================================================== *)
+(* 7. MIDDLEWARE DECLARATION                                                *)
+(* ======================================================================== *)
+
+(* Middleware functions are regular Clean Language functions whose signature *)
+(* receives (req, res, next) and are referenced by name in server_config or *)
+(* on individual routes.                                                    *)
+
+middleware_declaration
+                    = "middleware" , identifier , ":" , NEWLINE
+                    , INDENT , { statement } ;
+
+
+(* ======================================================================== *)
+(* 8. BUILT-IN TYPES                                                        *)
+(* ======================================================================== *)
+
+(* These types are injected into scope by the frame-server plugin and do    *)
+(* not need to be imported explicitly.                                      *)
+
+server_type         = "Request"
+                    | "Response" ;
+
+
+(* ======================================================================== *)
+(* 9. INTEGRATION WITH CORE GRAMMAR                                         *)
+(* ======================================================================== *)
+
+(* The productions below augment the core grammar's top-level rules.       *)
+
+(* top_level_declaration (core) is extended to also accept:                 *)
+(*   endpoints_block | server_config | middleware_declaration               *)
+
+(* expression (core) is extended to also accept:                            *)
+(*   req_expression | response_expression                                   *)
+
+(* type (core) is extended to also accept: server_type                     *)

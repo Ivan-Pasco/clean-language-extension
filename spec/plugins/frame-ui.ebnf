@@ -1,0 +1,299 @@
+(* ============================================================================ *)
+(* frame-ui Plugin Grammar — EBNF Specification                               *)
+(* Plugin:  frame-ui                                                          *)
+(* Version: 1.0.0                                                             *)
+(* Date:    2026-04-12                                                        *)
+(* Extends: Clean Language core grammar (spec/grammar.ebnf)                  *)
+(*                                                                            *)
+(* This file specifies the syntax extensions introduced by the frame-ui       *)
+(* plugin. It defines component, screen, page, html template, and styles      *)
+(* block syntax, as well as the ui configuration block, HTML directives, and  *)
+(* reactive state/props declarations.                                         *)
+(*                                                                            *)
+(* All core grammar productions (expression, identifier, type, statement,     *)
+(* string_literal, etc.) are inherited from spec/grammar.ebnf without        *)
+(* redefinition.                                                              *)
+(* ============================================================================ *)
+
+
+(* ======================================================================== *)
+(* 1. COMPONENT DECLARATION                                                 *)
+(* ======================================================================== *)
+
+(* component_block defines a reusable UI component with reactive state,     *)
+(* typed props, template markup, event handlers, and derived computations.  *)
+
+component_block     = "component" , class_name , ":" , NEWLINE
+                    , INDENT , { component_section } ;
+
+component_section   = state_section
+                    | props_section
+                    | render_section
+                    | handlers_section
+                    | computed_section ;
+
+
+(* --- 1.1 State Section --- *)
+
+(* state declares mutable reactive variables local to the component.       *)
+state_section       = "state" , ":" , NEWLINE
+                    , INDENT , INDENT , { state_field , NEWLINE } ;
+
+state_field         = identifier , ":" , expression ;
+
+
+(* --- 1.2 Props Section --- *)
+
+(* props declares the typed interface a parent component passes in.        *)
+props_section       = "props" , ":" , NEWLINE
+                    , INDENT , INDENT , { props_field , NEWLINE } ;
+
+props_field         = identifier , ":" , type
+                    , [ "=" , expression ] ;    (* optional default value   *)
+
+
+(* --- 1.3 Render Section --- *)
+
+(* render contains the html sub-block (and optionally other render logic).  *)
+render_section      = "render" , ":" , NEWLINE
+                    , INDENT , INDENT , { render_item } ;
+
+render_item         = html_block
+                    | statement ;
+
+
+(* --- 1.4 Handlers Section --- *)
+
+(* handlers groups named event-handler functions for the component.        *)
+handlers_section    = "handlers" , ":" , NEWLINE
+                    , INDENT , INDENT , { handler_function } ;
+
+handler_function    = identifier , "(" , [ parameter_list ] , ")" , ":" , NEWLINE
+                    , INDENT , INDENT , INDENT , { statement } ;
+
+parameter_list      = parameter , { "," , parameter } ;
+
+parameter           = identifier , [ ":" , type ] ;
+
+
+(* --- 1.5 Computed Section --- *)
+
+(* computed declares derived values that are lazily re-evaluated when their  *)
+(* reactive dependencies change.                                             *)
+computed_section    = "computed" , ":" , NEWLINE
+                    , INDENT , INDENT , { computed_field , NEWLINE } ;
+
+computed_field      = identifier , "=" , expression ;
+
+
+(* ======================================================================== *)
+(* 2. SCREEN AND PAGE DECLARATIONS                                          *)
+(* ======================================================================== *)
+
+(* screen and page are top-level routed views. Both share the same body     *)
+(* structure as component_block but convey different semantic intent:       *)
+(*   screen — full-screen routed view without URL segments                  *)
+(*   page   — routed view with optional URL path annotation                 *)
+
+screen_block        = "screen" , class_name , ":" , NEWLINE
+                    , INDENT , { component_section } ;
+
+page_block          = "page" , class_name , [ page_path_annotation ]
+                    , ":" , NEWLINE
+                    , INDENT , { component_section } ;
+
+(* page_path_annotation documents the URL at which the page is mounted.    *)
+page_path_annotation
+                    = "at" , string_literal ;
+
+
+(* ======================================================================== *)
+(* 3. HTML TEMPLATE BLOCK                                                   *)
+(* ======================================================================== *)
+
+(* html_block embeds an HTML template directly in Clean source. The         *)
+(* optional var attribute names the variable that exposes the DOM element   *)
+(* to handler code.                                                         *)
+
+html_block          = "html" , [ html_var_attribute ] , ":" , NEWLINE
+                    , INDENT , { html_node } ;
+
+html_var_attribute  = "var" , "=" , string_literal ;
+
+(* html_node covers both element and text content lines within the block.  *)
+html_node           = html_element
+                    | html_text_node ;
+
+html_element        = html_open_tag , [ html_element_content ] ;
+
+html_open_tag       = "<" , html_tag_name
+                    , { html_attribute }
+                    , ( ">" | "/>" ) ;
+
+html_tag_name       = identifier ;
+
+html_attribute      = standard_attribute
+                    | directive_attribute
+                    | interpolation_attribute ;
+
+(* standard_attribute: name="value" or name={expression}                   *)
+standard_attribute  = identifier , "=" , ( string_literal | "{" , expression , "}" ) ;
+
+(* interpolation_attribute: shorthand {varName} binds the attribute value  *)
+interpolation_attribute
+                    = "{" , identifier , "}" ;
+
+html_element_content
+                    = NEWLINE , INDENT , { html_node }
+                    | html_inline_text ;
+
+html_inline_text    = { ANY - ( "<" | NEWLINE ) } ;
+
+(* Text nodes may contain {{expression}} interpolation.                    *)
+html_text_node      = { html_text_part } ;
+
+html_text_part      = "{{" , expression , "}}"
+                    | { ANY - ( "{" | "<" | NEWLINE ) } ;
+
+
+(* --- 3.1 HTML Directives --- *)
+
+(* Directives are special attributes in the "cl-" namespace that control    *)
+(* rendering behaviour at the framework level.                              *)
+
+directive_attribute = cl_if_directive
+                    | cl_else_directive
+                    | cl_iterate_directive
+                    | cl_bind_directive
+                    | cl_client_directive
+                    | cl_slot_directive
+                    | cl_show_directive
+                    | cl_validate_directive ;
+
+(* cl-if conditionally renders the element.                                *)
+cl_if_directive     = "cl-if"       , "=" , ( string_literal | "{" , expression , "}" ) ;
+
+(* cl-else must immediately follow an element with cl-if.                  *)
+cl_else_directive   = "cl-else" ;
+
+(* cl-iterate repeats the element for each item in a collection.           *)
+(* Value format: "item in collection"                                      *)
+cl_iterate_directive
+                    = "cl-iterate"  , "=" , iterate_binding ;
+
+iterate_binding     = string_literal ;  (* "item in items" or "key, val in map" *)
+
+(* cl-bind creates a two-way data binding between an input and a state var. *)
+cl_bind_directive   = "cl-bind"     , "=" , ( string_literal | "{" , expression , "}" ) ;
+
+(* cl-client sets the hydration mode for the element subtree.              *)
+cl_client_directive = "cl-client"   , "=" , hydration_mode ;
+
+hydration_mode      = '"' , ( "off" | "on" | "visible" | "idle" | "only" ) , '"' ;
+
+(* cl-slot marks a named insertion point in a component template.          *)
+cl_slot_directive   = "cl-slot"     , [ "=" , string_literal ] ;
+
+(* cl-show toggles visibility without removing the element from the DOM.   *)
+cl_show_directive   = "cl-show"     , "=" , ( string_literal | "{" , expression , "}" ) ;
+
+(* cl-validate associates a validation rule set with a form field.         *)
+cl_validate_directive
+                    = "cl-validate" , "=" , string_literal ;
+
+
+(* ======================================================================== *)
+(* 4. STYLES BLOCK                                                          *)
+(* ======================================================================== *)
+
+(* styles_block scopes CSS rules and design-token variables to a named      *)
+(* stylesheet. The block may contain CSS variable declarations and global   *)
+(* rule strings.                                                            *)
+
+styles_block        = "styles" , class_name , ":" , NEWLINE
+                    , INDENT , { styles_section } ;
+
+styles_section      = variables_section
+                    | global_section ;
+
+(* variables_section defines CSS custom properties (design tokens).        *)
+variables_section   = "variables" , ":" , NEWLINE
+                    , INDENT , INDENT , { css_variable_declaration , NEWLINE } ;
+
+css_variable_declaration
+                    = css_token_name , ":" , string_literal ;
+
+(* css_token_name is a kebab-case identifier like "color-primary".         *)
+css_token_name      = ( LOWER_ALPHA | "-" ) , { ALPHANUMERIC | "-" } ;
+
+(* global_section contains raw CSS rules as string literals or identifiers. *)
+global_section      = "global" , ":" , NEWLINE
+                    , INDENT , INDENT , { css_rule_line , NEWLINE } ;
+
+css_rule_line       = string_literal
+                    | identifier
+                    | expression ;
+
+
+(* ======================================================================== *)
+(* 5. UI CONFIGURATION BLOCK                                                *)
+(* ======================================================================== *)
+
+(* ui_block declares application-level design tokens and theme values.     *)
+(* It is typically placed at the top level of a dedicated theme file.      *)
+
+ui_block            = "ui" , ":" , NEWLINE
+                    , INDENT , { ui_section } ;
+
+ui_section          = theme_section ;
+
+theme_section       = "theme" , ":" , NEWLINE
+                    , INDENT , INDENT , { theme_sub_section } ;
+
+theme_sub_section   = colors_section
+                    | spacing_section
+                    | theme_generic_section ;
+
+(* colors_section maps color role names to hex or CSS color values.        *)
+colors_section      = "colors" , ":" , NEWLINE
+                    , INDENT , INDENT , INDENT , { color_entry , NEWLINE } ;
+
+color_entry         = identifier , ":" , string_literal ;
+
+(* spacing_section maps size names (sm, md, lg, …) to CSS length values.   *)
+spacing_section     = "spacing" , ":" , NEWLINE
+                    , INDENT , INDENT , INDENT , { spacing_entry , NEWLINE } ;
+
+spacing_entry       = identifier , ":" , string_literal ;
+
+(* Catch-all for future theme sub-sections.                                *)
+theme_generic_section
+                    = identifier , ":" , NEWLINE
+                    , INDENT , INDENT , INDENT , { theme_entry , NEWLINE } ;
+
+theme_entry         = identifier , ":" , ( string_literal | expression ) ;
+
+
+(* ======================================================================== *)
+(* 6. BUILT-IN TYPES                                                        *)
+(* ======================================================================== *)
+
+(* These types are injected into scope by the frame-ui plugin.             *)
+
+ui_plugin_type      = "Component"
+                    | "Props"
+                    | "State" ;
+
+
+(* ======================================================================== *)
+(* 7. INTEGRATION WITH CORE GRAMMAR                                         *)
+(* ======================================================================== *)
+
+(* top_level_declaration (core) is extended to also accept:                 *)
+(*   component_block | screen_block | page_block                           *)
+(*   | styles_block | ui_block                                              *)
+
+(* render_item inside component, screen, and page may include html_block    *)
+(* in addition to all core statements.                                      *)
+
+(* type (core) is extended to also accept: ui_plugin_type                  *)

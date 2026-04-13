@@ -1,5 +1,8 @@
 # Server Extensions
 
+> **Authoritative source for function signatures:** [`function-registry.toml`](function-registry.toml)
+> This document provides human-readable descriptions. The TOML registry is the machine-checkable source of truth validated by automated tests.
+
 This document describes the server-specific host functions that extend the portable host-bridge for HTTP server functionality.
 
 ## Overview
@@ -191,9 +194,146 @@ let user_pref = request.cookie("theme")  // "dark" or "light"
 
 ---
 
-## Session Authentication Functions (5 functions)
+## Session Management Functions (7 functions)
 
-These functions manage session-based authentication.
+These functions provide key-value session storage, CSRF token management, and cookie control.
+
+### `_session_store`
+
+Store data by session ID.
+
+```
+Signature: (id_ptr: i32, id_len: i32, data_ptr: i32, data_len: i32) -> i32
+Returns: 1 on success, 0 on error
+```
+
+**Example (Clean Language):**
+```clean
+session.store(session_id, json.stringify(user_data))
+```
+
+---
+
+### `_session_get`
+
+Get session data by ID.
+
+```
+Signature: (id_ptr: i32, id_len: i32) -> i32
+Returns: Pointer to data string (empty if not found or expired)
+```
+
+---
+
+### `_session_delete`
+
+Delete session data by ID.
+
+```
+Signature: (id_ptr: i32, id_len: i32) -> i32
+Returns: 1 if deleted, 0 if not found
+```
+
+---
+
+### `_session_exists`
+
+Check if a session exists.
+
+```
+Signature: (id_ptr: i32, id_len: i32) -> i32
+Returns: 1 if exists, 0 if not
+```
+
+---
+
+### `_session_set_csrf`
+
+Store a CSRF token for the current session (identified via auth context or cookie).
+
+```
+Signature: (token_ptr: i32, token_len: i32) -> i32
+Returns: 1 on success, 0 if no active session
+```
+
+---
+
+### `_session_get_csrf`
+
+Get the CSRF token for the current session.
+
+```
+Signature: () -> i32
+Returns: Pointer to token string (empty if none)
+```
+
+---
+
+### `_http_set_cookie`
+
+Set a cookie with name, value, and options.
+
+```
+Signature: (name_ptr: i32, name_len: i32, value_ptr: i32, value_len: i32, opts_ptr: i32, opts_len: i32) -> i32
+Returns: 1 on success, 0 on error
+```
+
+**Options format:** Semicolon-separated cookie attributes, e.g., `"Path=/; HttpOnly; Secure; Max-Age=3600"`
+
+**Example (Clean Language):**
+```clean
+http.setCookie("session", session_id, "Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=3600")
+```
+
+---
+
+## Role-Based Permissions (3 functions)
+
+### `_roles_register`
+
+Register role definitions from JSON.
+
+```
+Signature: (json_ptr: i32, json_len: i32) -> i32
+Returns: 1 on success, 0 on error
+```
+
+**Config format:**
+```json
+{
+  "admin": ["read", "write", "delete", "manage_users"],
+  "editor": ["read", "write"],
+  "viewer": ["read"]
+}
+```
+
+---
+
+### `_role_has_permission`
+
+Check if a role has a specific permission.
+
+```
+Signature: (role_ptr: i32, role_len: i32, perm_ptr: i32, perm_len: i32) -> i32
+Returns: 1 if has permission, 0 if not
+```
+
+---
+
+### `_role_get_permissions`
+
+Get all permissions for a role.
+
+```
+Signature: (role_ptr: i32, role_len: i32) -> i32
+Returns: Pointer to JSON array string (e.g., '["read","write"]')
+```
+
+---
+
+## Session Authentication Functions (9 functions)
+
+These functions manage cookie-based session authentication. They work alongside the key-value session storage above.
 
 ### `_auth_get_session`
 
@@ -268,6 +408,55 @@ Returns: 1 if user has any role, 0 if not
 
 ---
 
+### `_auth_set_session`
+
+Create a new typed session from JSON data and set the auth context + cookie.
+
+```
+Signature: (data_ptr: i32, data_len: i32) -> i32
+Returns: 1 on success, 0 on error
+```
+
+**Input format:**
+```json
+{"user_id": 123, "role": "admin", "claims": {"email": "user@example.com"}}
+```
+
+---
+
+### `_auth_clear_session`
+
+Clear the current session (logout). Removes session data and sets a clear-cookie header.
+
+```
+Signature: () -> i32
+Returns: 1 on success, 0 if no session
+```
+
+---
+
+### `_auth_user_id`
+
+Get the current authenticated user's ID.
+
+```
+Signature: () -> i32
+Returns: User ID (i32), or 0 if not authenticated
+```
+
+---
+
+### `_auth_user_role`
+
+Get the current authenticated user's role.
+
+```
+Signature: () -> i32
+Returns: Pointer to role string (empty if not authenticated)
+```
+
+---
+
 ## Response Manipulation Functions (2 functions)
 
 These functions allow handlers to control HTTP response headers and redirects.
@@ -326,7 +515,7 @@ response.redirect("/result", 307)
 
 **Notes:**
 - When a redirect is set, the handler's return value (body) is ignored
-- Cookies set via `_session_create` are still included in redirect responses
+- Cookies set via `_http_set_cookie` or `_auth_set_session` are still included in redirect responses
 - Custom headers set via `_res_set_header` are also included
 
 ---

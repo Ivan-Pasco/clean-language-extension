@@ -1,0 +1,241 @@
+(* ============================================================================ *)
+(* frame-auth Plugin Grammar — EBNF Specification                             *)
+(* Plugin:  frame-auth                                                        *)
+(* Version: 1.0.0                                                             *)
+(* Date:    2026-04-12                                                        *)
+(* Extends: Clean Language core grammar (spec/grammar.ebnf)                  *)
+(*                                                                            *)
+(* This file specifies the syntax extensions introduced by the frame-auth     *)
+(* plugin. It defines authentication configuration (session and JWT),         *)
+(* role-based access control declarations, protected resource guards, and     *)
+(* the generated helper function signatures available in scope at runtime.    *)
+(*                                                                            *)
+(* All core grammar productions (expression, identifier, type, statement,     *)
+(* string_literal, etc.) are inherited from spec/grammar.ebnf without        *)
+(* redefinition.                                                              *)
+(* ============================================================================ *)
+
+
+(* ======================================================================== *)
+(* 1. AUTH CONFIGURATION BLOCK                                              *)
+(* ======================================================================== *)
+
+(* auth_block is a top-level declaration that configures the authentication  *)
+(* subsystem for the application. It appears once per entry-point file.     *)
+
+auth_block          = "auth" , ":" , NEWLINE
+                    , INDENT , { auth_section } ;
+
+auth_section        = session_section
+                    | jwt_section
+                    | csrf_section ;
+
+
+(* --- 1.1 Session Configuration --- *)
+
+(* session_section configures server-side session management backed by a    *)
+(* cookie transport. All fields are optional; unset fields use defaults.   *)
+
+session_section     = "session" , ":" , NEWLINE
+                    , INDENT , INDENT , { session_field , NEWLINE } ;
+
+session_field       = session_cookie_field
+                    | session_timeout_field
+                    | session_secure_field
+                    | session_http_only_field
+                    | session_same_site_field ;
+
+(* Name of the session cookie sent to the browser.                         *)
+session_cookie_field
+                    = "cookie" , "=" , string_literal ;
+
+(* Inactivity timeout in minutes before the session expires.               *)
+session_timeout_field
+                    = "timeoutMinutes" , "=" , integer_literal ;
+
+(* Whether the cookie is only sent over HTTPS.                             *)
+session_secure_field
+                    = "secure" , "=" , boolean_literal ;
+
+(* Prevents client-side JavaScript from accessing the cookie.              *)
+session_http_only_field
+                    = "httpOnly" , "=" , boolean_literal ;
+
+(* SameSite attribute: "Strict", "Lax", or "None".                         *)
+session_same_site_field
+                    = "sameSite" , "=" , string_literal ;
+
+
+(* --- 1.2 JWT Configuration --- *)
+
+(* jwt_section configures JSON Web Token signing and verification.          *)
+
+jwt_section         = "jwt" , ":" , NEWLINE
+                    , INDENT , INDENT , { jwt_field , NEWLINE } ;
+
+jwt_field           = jwt_enabled_field
+                    | jwt_secret_field
+                    | jwt_alg_field
+                    | jwt_ttl_field
+                    | jwt_refresh_ttl_field ;
+
+(* Enables or disables JWT support.                                        *)
+jwt_enabled_field   = "enabled" , "=" , boolean_literal ;
+
+(* Signing secret. Supports env-var interpolation via $VAR_NAME syntax.    *)
+jwt_secret_field    = "secret" , "=" , ( string_literal | env_var_ref ) ;
+
+(* Algorithm identifier, e.g. "HS256", "RS256".                            *)
+jwt_alg_field       = "alg" , "=" , string_literal ;
+
+(* Access token time-to-live in minutes.                                   *)
+jwt_ttl_field       = "ttlMinutes" , "=" , integer_literal ;
+
+(* Refresh token time-to-live in minutes.                                  *)
+jwt_refresh_ttl_field
+                    = "refreshTtlMinutes" , "=" , integer_literal ;
+
+(* env_var_ref allows referencing environment variables for secrets.        *)
+(* Format: $ENV_VAR_NAME — resolved at runtime, never stored in source.    *)
+env_var_ref         = "$" , ( UPPER_ALPHA | "_" ) , { UPPER_ALPHA | DIGIT | "_" } ;
+
+
+(* --- 1.3 CSRF Configuration --- *)
+
+csrf_section        = "csrf" , ":" , NEWLINE
+                    , INDENT , INDENT , { csrf_field , NEWLINE } ;
+
+csrf_field          = csrf_enabled_field ;
+
+csrf_enabled_field  = "enabled" , "=" , boolean_literal ;
+
+
+(* ======================================================================== *)
+(* 2. ROLES DECLARATION                                                     *)
+(* ======================================================================== *)
+
+(* roles_block defines the role hierarchy and the permissions each role      *)
+(* grants. Permissions are string identifiers; "*" grants all permissions.  *)
+
+roles_block         = "roles" , ":" , NEWLINE
+                    , INDENT , { role_entry , NEWLINE } ;
+
+role_entry          = identifier , ":" , permission_list ;
+
+(* permission_list is an inline list of permission strings.                *)
+permission_list     = "[" , permission_item , { "," , permission_item } , "]" ;
+
+permission_item     = string_literal ;     (* e.g. "*", "read", "write"    *)
+
+
+(* ======================================================================== *)
+(* 3. PROTECTED RESOURCE DECLARATION                                        *)
+(* ======================================================================== *)
+
+(* protected_block gates a named resource (function, endpoint group, etc.)  *)
+(* behind an access-control check. The identifier names the resource; the   *)
+(* require clause names the role that must be present on the current user.  *)
+
+protected_block     = "protected" , identifier , ":" , NEWLINE
+                    , INDENT , protected_body ;
+
+protected_body      = { protected_clause , NEWLINE } ;
+
+protected_clause    = protected_require_clause
+                    | protected_permissions_clause
+                    | statement ;
+
+(* require names the minimum role level allowed to access this resource.   *)
+protected_require_clause
+                    = "require" , ":" , role_ref ;
+
+role_ref            = identifier , { "," , identifier } ;
+
+(* permissions lists fine-grained permission strings required (AND logic).  *)
+protected_permissions_clause
+                    = "permissions" , ":" , permission_list ;
+
+
+(* ======================================================================== *)
+(* 4. LOGIN BLOCK                                                           *)
+(* ======================================================================== *)
+
+(* login_block declares the authentication flow for a named strategy or     *)
+(* endpoint. It wires credential validation to session or token issuance.  *)
+
+login_block         = "login" , [ identifier ] , ":" , NEWLINE
+                    , INDENT , { login_clause , NEWLINE } ;
+
+login_clause        = login_field_clause
+                    | statement ;
+
+login_field_clause  = identifier , "=" , expression ;
+
+
+(* ======================================================================== *)
+(* 5. GENERATED FUNCTION SIGNATURES                                         *)
+(* ======================================================================== *)
+
+(* The frame-auth plugin injects the following functions into the program    *)
+(* scope automatically. These productions document their call syntax only;  *)
+(* implementations are provided by the plugin runtime.                     *)
+
+auth_function_call  = session_create_call
+                    | session_get_call
+                    | session_destroy_call
+                    | jwt_sign_call
+                    | jwt_verify_call
+                    | hash_password_call
+                    | verify_password_call
+                    | can_call
+                    | has_role_call
+                    | current_user_call
+                    | login_user_call
+                    | logout_user_call ;
+
+session_create_call = "session_create" , "(" , expression , ")" ;
+session_get_call    = "session_get"    , "(" , [ string_literal ] , ")" ;
+session_destroy_call
+                    = "session_destroy" , "(" , ")" ;
+
+jwt_sign_call       = "jwt_sign"   , "(" , expression
+                    , [ "," , expression ] , ")" ;
+jwt_verify_call     = "jwt_verify" , "(" , expression , ")" ;
+
+hash_password_call  = "hashPassword"   , "(" , expression , ")" ;
+verify_password_call
+                    = "verifyPassword"  , "(" , expression , "," , expression , ")" ;
+
+(* can(user, permission) — returns boolean                                 *)
+can_call            = "can" , "(" , expression , "," , string_literal , ")" ;
+
+(* hasRole(user, role) — returns boolean                                   *)
+has_role_call       = "hasRole" , "(" , expression , "," , identifier , ")" ;
+
+current_user_call   = "currentUser" , "(" , ")" ;
+login_user_call     = "loginUser"   , "(" , expression , ")" ;
+logout_user_call    = "logoutUser"  , "(" , ")" ;
+
+
+(* ======================================================================== *)
+(* 6. BUILT-IN TYPES                                                        *)
+(* ======================================================================== *)
+
+(* These types are injected into scope by the frame-auth plugin.           *)
+
+auth_plugin_type    = "Session"
+                    | "User"
+                    | "Role"
+                    | "Permission" ;
+
+
+(* ======================================================================== *)
+(* 7. INTEGRATION WITH CORE GRAMMAR                                         *)
+(* ======================================================================== *)
+
+(* top_level_declaration (core) is extended to also accept:                 *)
+(*   auth_block | roles_block | protected_block | login_block              *)
+
+(* expression (core) is extended to also accept: auth_function_call        *)
+
+(* type (core) is extended to also accept: auth_plugin_type                *)

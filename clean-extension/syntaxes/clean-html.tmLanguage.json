@@ -2,6 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
   "name": "Clean HTML",
   "scopeName": "text.html.clean",
+  "comment": "Minimal HTML grammar with Clean interpolation — directive and event highlighting comes from the language server. See platform-architecture/IDE_EXTENSION_ARCHITECTURE.md",
   "patterns": [
     { "include": "#clean-comments" },
     { "include": "#raw-interpolation" },
@@ -130,82 +131,8 @@
     },
     "tag-attributes": {
       "patterns": [
-        { "include": "#clean-directive-attribute" },
-        { "include": "#clean-bind-attribute" },
-        { "include": "#clean-event-attribute" },
         { "include": "#interpolation" },
         { "include": "#standard-attribute" }
-      ]
-    },
-    "clean-directive-attribute": {
-      "patterns": [
-        {
-          "name": "meta.attribute.directive.clean",
-          "match": "\\b(@)(if|else|each|show|slot|client|validate)\\b",
-          "captures": {
-            "1": { "name": "punctuation.definition.directive.clean" },
-            "2": { "name": "keyword.control.directive.clean" }
-          }
-        },
-        {
-          "name": "meta.attribute.directive.clean",
-          "begin": "(@)(if|else|each|show|slot|client|validate)(=)(\")",
-          "end": "(\")",
-          "beginCaptures": {
-            "1": { "name": "punctuation.definition.directive.clean" },
-            "2": { "name": "keyword.control.directive.clean" },
-            "3": { "name": "punctuation.separator.key-value.html" },
-            "4": { "name": "punctuation.definition.string.begin.html" }
-          },
-          "endCaptures": {
-            "1": { "name": "punctuation.definition.string.end.html" }
-          },
-          "patterns": [
-            { "include": "source.clean" }
-          ]
-        }
-      ]
-    },
-    "clean-bind-attribute": {
-      "patterns": [
-        {
-          "name": "meta.attribute.bind.clean",
-          "begin": "(:)([a-zA-Z][a-zA-Z0-9_-]*)(=)(\")",
-          "end": "(\")",
-          "beginCaptures": {
-            "1": { "name": "punctuation.definition.bind.clean" },
-            "2": { "name": "entity.other.attribute-name.bind.clean" },
-            "3": { "name": "punctuation.separator.key-value.html" },
-            "4": { "name": "punctuation.definition.string.begin.html" }
-          },
-          "endCaptures": {
-            "1": { "name": "punctuation.definition.string.end.html" }
-          },
-          "patterns": [
-            { "include": "source.clean" }
-          ]
-        }
-      ]
-    },
-    "clean-event-attribute": {
-      "patterns": [
-        {
-          "name": "meta.attribute.event.clean",
-          "begin": "(@)(on[a-zA-Z]+)(=)(\")",
-          "end": "(\")",
-          "beginCaptures": {
-            "1": { "name": "punctuation.definition.event.clean" },
-            "2": { "name": "entity.other.attribute-name.event.clean" },
-            "3": { "name": "punctuation.separator.key-value.html" },
-            "4": { "name": "punctuation.definition.string.begin.html" }
-          },
-          "endCaptures": {
-            "1": { "name": "punctuation.definition.string.end.html" }
-          },
-          "patterns": [
-            { "include": "source.clean" }
-          ]
-        }
       ]
     },
     "standard-attribute": {

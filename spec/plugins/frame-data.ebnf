@@ -1,0 +1,259 @@
+(* ============================================================================ *)
+(* frame-data Plugin Grammar — EBNF Specification                             *)
+(* Plugin:  frame-data                                                        *)
+(* Version: 1.0.0                                                             *)
+(* Date:    2026-04-12                                                        *)
+(* Extends: Clean Language core grammar (spec/grammar.ebnf)                  *)
+(*                                                                            *)
+(* This file specifies the syntax extensions introduced by the frame-data     *)
+(* plugin. It defines model declarations, query DSL, mutation operations,     *)
+(* schema migrations, and transactional code blocks.                          *)
+(*                                                                            *)
+(* All core grammar productions (expression, identifier, type, statement,     *)
+(* string_literal, etc.) are inherited from spec/grammar.ebnf without        *)
+(* redefinition.                                                              *)
+(* ============================================================================ *)
+
+
+(* ======================================================================== *)
+(* 1. DATA MODEL DECLARATION                                                *)
+(* ======================================================================== *)
+
+(* A data_block declares a database-backed model. The block name becomes    *)
+(* the model class name, available as a static accessor at runtime.        *)
+
+data_block          = "data" , class_name , ":" , NEWLINE
+                    , INDENT , { data_field_declaration } ;
+
+(* Each field maps to a database column.                                    *)
+data_field_declaration
+                    = identifier , ":" , data_type
+                    , [ "=" , expression ]
+                    , NEWLINE ;
+
+(* data_type extends core type with database-specific hints.               *)
+data_type           = "integer"
+                    | "number"
+                    | "string"
+                    | "boolean"
+                    | "text"                    (* unbounded string column  *)
+                    | "date"
+                    | "datetime"
+                    | "uuid"
+                    | "json"
+                    | class_name                (* relation / foreign model *)
+                    | "list" , "<" , data_type , ">"
+                    | type ;                    (* fallback to core type    *)
+
+
+(* ======================================================================== *)
+(* 2. QUERY EXPRESSIONS                                                     *)
+(* ======================================================================== *)
+
+(* Query operations are invoked on a model name using a dot accessor and a  *)
+(* query keyword, followed by an indented query_body.                       *)
+
+query_expression    = class_name , "." , query_verb , query_argument ;
+
+query_verb          = "find"
+                    | "first"
+                    | "count"
+                    | "select" ;
+
+(* A query_argument is either a single-line shorthand or a multi-line body. *)
+query_argument      = ":" , NEWLINE , INDENT , query_body           (* block form   *)
+                    | "(" , [ expression ] , ")"                    (* call form    *)
+                    | (* empty — bare model.find with no filters *)  ;
+
+query_body          = { query_clause } ;
+
+query_clause        = where_clause
+                    | order_clause
+                    | limit_clause
+                    | offset_clause
+                    | include_clause
+                    | join_clause
+                    | group_clause
+                    | having_clause
+                    | select_clause ;
+
+
+(* --- 2.1 WHERE Clause --- *)
+
+(* where introduces a predicate that filters result rows.                   *)
+where_clause        = "where" , ":" , NEWLINE
+                    , INDENT , INDENT , { where_condition , NEWLINE } ;
+
+where_condition     = expression ;
+
+
+(* --- 2.2 ORDER Clause --- *)
+
+order_clause        = "order" , ":" , order_field
+                    , [ order_direction ]
+                    , NEWLINE ;
+
+order_field         = identifier ;
+
+order_direction     = "asc" | "desc" ;
+
+
+(* --- 2.3 LIMIT and OFFSET Clauses --- *)
+
+limit_clause        = "limit"  , ":" , integer_literal , NEWLINE ;
+
+offset_clause       = "offset" , ":" , integer_literal , NEWLINE ;
+
+
+(* --- 2.4 INCLUDE Clause (eager loading / joins) --- *)
+
+include_clause      = "include" , ":" , include_list , NEWLINE ;
+
+include_list        = identifier , { "," , identifier } ;
+
+
+(* --- 2.5 JOIN Clause --- *)
+
+join_clause         = "join" , ":" , NEWLINE
+                    , INDENT , INDENT , { join_item , NEWLINE } ;
+
+join_item           = join_type , class_name , "on" , expression ;
+
+join_type           = "inner"
+                    | "left"
+                    | "right"
+                    | "outer" ;
+
+
+(* --- 2.6 GROUP and HAVING Clauses --- *)
+
+group_clause        = "group" , ":" , identifier_list , NEWLINE ;
+
+having_clause       = "having" , ":" , expression , NEWLINE ;
+
+identifier_list     = identifier , { "," , identifier } ;
+
+
+(* --- 2.7 SELECT Clause (column projection) --- *)
+
+select_clause       = "select" , ":" , projection_list , NEWLINE ;
+
+projection_list     = projection_item , { "," , projection_item } ;
+
+projection_item     = identifier
+                    | identifier , "as" , identifier   (* aliased column   *) ;
+
+
+(* ======================================================================== *)
+(* 3. MUTATION OPERATIONS                                                   *)
+(* ======================================================================== *)
+
+(* Mutations modify rows in the backing store.                              *)
+
+mutation_expression = insert_expression
+                    | update_expression
+                    | delete_expression ;
+
+(* --- 3.1 INSERT --- *)
+
+insert_expression   = class_name , "." , "insert" , ":" , NEWLINE
+                    , INDENT , { assignment_pair , NEWLINE } ;
+
+assignment_pair     = identifier , "=" , expression ;
+
+
+(* --- 3.2 UPDATE --- *)
+
+update_expression   = class_name , "." , "update" , ":" , NEWLINE
+                    , INDENT , { update_clause } ;
+
+update_clause       = where_clause
+                    | set_clause ;
+
+set_clause          = "set" , ":" , NEWLINE
+                    , INDENT , INDENT , { assignment_pair , NEWLINE } ;
+
+
+(* --- 3.3 DELETE --- *)
+
+delete_expression   = class_name , "." , "delete" , ":" , NEWLINE
+                    , INDENT , where_clause ;
+
+
+(* ======================================================================== *)
+(* 4. MIGRATION BLOCK                                                       *)
+(* ======================================================================== *)
+
+(* migrate_block declares a named schema migration with up/down scripts.    *)
+(* The migration_id string should follow the convention "NNN_description".  *)
+
+migrate_block       = "migrate" , string_literal , ":" , NEWLINE
+                    , INDENT , { migration_direction } ;
+
+migration_direction = up_block
+                    | down_block ;
+
+(* up_block runs when applying the migration.                               *)
+up_block            = "up" , ":" , NEWLINE
+                    , INDENT , INDENT , { migration_statement , NEWLINE } ;
+
+(* down_block runs when reverting the migration.                            *)
+down_block          = "down" , ":" , NEWLINE
+                    , INDENT , INDENT , { migration_statement , NEWLINE } ;
+
+(* migration_statement is a raw SQL string literal or a schema helper call. *)
+migration_statement = string_literal
+                    | schema_helper_call ;
+
+schema_helper_call  = schema_helper_name , "(" , { expression , "," } , ")" ;
+
+schema_helper_name  = "createTable"
+                    | "dropTable"
+                    | "addColumn"
+                    | "dropColumn"
+                    | "renameColumn"
+                    | "createIndex"
+                    | "dropIndex"
+                    | "addForeignKey"
+                    | "dropForeignKey"
+                    | "execute" ;
+
+
+(* ======================================================================== *)
+(* 5. TRANSACTION BLOCK                                                     *)
+(* ======================================================================== *)
+
+(* Data.tx wraps its body in a database transaction. If any statement       *)
+(* inside raises an error, the entire transaction is rolled back.           *)
+
+transaction_block   = data_accessor , "." , "tx" , ":" , NEWLINE
+                    , INDENT , { statement } ;
+
+(* data_accessor is the plugin-level static "Data" object.                 *)
+data_accessor       = "Data" ;
+
+
+(* ======================================================================== *)
+(* 6. BUILT-IN TYPES                                                        *)
+(* ======================================================================== *)
+
+(* These types are injected into scope by the frame-data plugin.           *)
+
+data_plugin_type    = "Model"
+                    | "Query"
+                    | "Transaction" ;
+
+
+(* ======================================================================== *)
+(* 7. INTEGRATION WITH CORE GRAMMAR                                         *)
+(* ======================================================================== *)
+
+(* top_level_declaration (core) is extended to also accept:                 *)
+(*   data_block | migrate_block                                             *)
+
+(* expression (core) is extended to also accept:                            *)
+(*   query_expression | mutation_expression | transaction_block             *)
+
+(* type (core) is extended to also accept: data_plugin_type                *)
+
+(* statement (core) is extended to also accept: transaction_block          *)

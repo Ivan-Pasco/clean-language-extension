@@ -16,14 +16,12 @@ export class CleanStatusBar {
 	private actionStatusBarItems: vscode.StatusBarItem[] = [];
 	private serverStatusBarItem: vscode.StatusBarItem;
 	private buildStatusBarItem: vscode.StatusBarItem;
-	private pluginStatusBarItem: vscode.StatusBarItem;
 
 	constructor(cleanManager: CleanManagerIntegration) {
 		this.cleanManager = cleanManager;
 		this.versionStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
 		this.serverStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 95);
 		this.buildStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 94);
-		this.pluginStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 93);
 	}
 
 	/**
@@ -46,11 +44,6 @@ export class CleanStatusBar {
 		this.buildStatusBarItem.tooltip = 'Build Clean Framework project';
 		this.buildStatusBarItem.command = 'clean.build';
 
-		// Plugin status bar item (hidden by default)
-		this.pluginStatusBarItem.text = '$(extensions) 0 plugins';
-		this.pluginStatusBarItem.tooltip = 'No plugins loaded';
-		this.pluginStatusBarItem.command = 'clean.listPlugins';
-
 		// Action buttons for Clean Language files
 		this.createActionButtons();
 
@@ -63,7 +56,6 @@ export class CleanStatusBar {
 			this.versionStatusBarItem,
 			this.serverStatusBarItem,
 			this.buildStatusBarItem,
-			this.pluginStatusBarItem,
 			editorChangeDisposable,
 			...this.actionStatusBarItems
 		);
@@ -172,11 +164,9 @@ export class CleanStatusBar {
 		if (isCleanFile) {
 			this.serverStatusBarItem.show();
 			this.buildStatusBarItem.show();
-			// Plugin status bar is shown based on plugin count
 		} else {
 			this.serverStatusBarItem.hide();
 			this.buildStatusBarItem.hide();
-			this.pluginStatusBarItem.hide();
 		}
 	}
 
@@ -219,28 +209,14 @@ export class CleanStatusBar {
 	}
 
 	/**
-	 * Update plugin count display
+	 * Show setup required state when compiler/language server is not found
 	 */
-	updatePluginCount(count: number, pluginNames?: string[]): void {
-		if (count === 0) {
-			this.pluginStatusBarItem.hide();
-			return;
-		}
-
-		this.pluginStatusBarItem.text = `$(extensions) ${count} plugin${count === 1 ? '' : 's'}`;
-
-		if (pluginNames && pluginNames.length > 0) {
-			this.pluginStatusBarItem.tooltip = `Loaded plugins:\n${pluginNames.map(n => `  • ${n}`).join('\n')}\n\nClick to view plugin list`;
-		} else {
-			this.pluginStatusBarItem.tooltip = `${count} plugin${count === 1 ? '' : 's'} loaded. Click to view list.`;
-		}
-
-		// Only show if on a Clean file
-		const editor = vscode.window.activeTextEditor;
-		const isCleanFile = editor && (editor.document.languageId === 'clean' || editor.document.languageId === 'clean-html');
-		if (isCleanFile) {
-			this.pluginStatusBarItem.show();
-		}
+	showSetupRequired(): void {
+		this.versionStatusBarItem.text = '$(warning) Clean Language: Setup Required';
+		this.versionStatusBarItem.tooltip = 'Compiler not found. Click to install cleen and enable all language features.';
+		this.versionStatusBarItem.command = 'clean.setupCleen';
+		this.versionStatusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
+		this.versionStatusBarItem.show();
 	}
 
 	/**

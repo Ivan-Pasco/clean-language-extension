@@ -1,18 +1,20 @@
-# Clean Language Compiler Tasks and Progress
+# Clean Language Project — Tasks and Progress
 
-## **TESTING STATUS**
-- **Library Tests**: 68/68 (**100% success rate** - ALL CORE TESTS PASSING!)
-- **Integration Tests**: 10/10 (**100% success rate** - ALL INTEGRATION TESTS PASSING!)
-- **Basic Examples**: 3/3 passing - arithmetic, functions, and matrix operations all working
-**WASM Output**: Optimized and stack-balanced - generates valid, parseable WASM modules
-- **Last Updated**: 2025-01-12 - MAJOR BREAKTHROUGH: All critical WASM validation issues resolved!
+## **TESTING STATUS** (Updated 2026-04-12)
+- **Unit Tests**: 418/420 passed (2 ignored)
+- **CI Tests**: 48/50 compiled (2 tier-4 expected failures: async, imports)
+- **.cln Compilation**: 372/379 files compile (98.2%)
+- **WASM Output**: Valid, parseable modules — zero `unreachable` instructions in generated code
+- **Stabilization Plan**: All 6 phases complete (spec, tools, tests, codegen audit, CI, sustainability)
 
-### Test Categories:
-- Library Tests: 68 tests - Primary test coverage
-- Integration Tests: 10 tests - End-to-end scenarios  
-- Basic Examples: 3 tests - Simple programs
-- Compiler Tests: 4 tests - Core functionality
-- Stdlib Tests: 13 tests - Standard library functions
+### Test Infrastructure:
+- Unit tests: `cargo test` in clean-language-compiler/
+- CI tests: `bash scripts/run_ci_tests.sh` (50 tests, 4 tiers)
+- Baseline: `clean-language-compiler/tests/results/ci_baseline.json`
+- Feature matrix: `tests/cln/ci/feature_matrix.md`
+
+### Cross-Component Prompts:
+- 124 prompts resolved and archived in `management/cross-component-prompts/resolved/`
 
 ---
 
