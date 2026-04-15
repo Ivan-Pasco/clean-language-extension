@@ -17,4 +17,4 @@ When modifying bridge function signatures:
 1. Update `platform-architecture/HOST_BRIDGE.md`
 2. Update the relevant plugin.toml
 3. Verify the compiler still generates matching imports
-4. Create a cross-component prompt if compiler changes are needed
+4. Report via `report_error` MCP tool if compiler changes are needed

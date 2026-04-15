@@ -142,9 +142,17 @@ impl WasmMemory {
 }
 ```
 
+## Memory Configuration
+
+| Setting | Compiler Default | Bridge Default | Notes |
+|---------|-----------------|----------------|-------|
+| Initial pages | 32 (2MB) | 1 (64KB) | Bridges start smaller |
+| Max pages | 1024 (64MB) | 1024 (64MB) | No memory cost until grow is called |
+| Page size | 65536 (64KB) | 65536 (64KB) | WASM standard |
+
 ## Memory Growth
 
-WASM memory starts at 1 page (64KB) and can grow:
+WASM memory starts at its initial page count and can grow up to the declared maximum:
 
 ```rust
 // Check if we need more memory
@@ -153,6 +161,8 @@ if needed_ptr > memory.data_size() as u32 {
     memory.grow(pages_needed as u64)?;
 }
 ```
+
+Note: `memory.grow` returns `-1` on failure (does not trap). The allocator must check for this and handle OOM gracefully.
 
 ## Passing Strings Between WASM and Host
 

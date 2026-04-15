@@ -14,7 +14,7 @@ Before completing any work session, verify:
 ```
 [ ] Read CLAUDE.md for this component (Principle 19)
 [ ] Ran health check command — know pass/fail state before changing anything (Principle 19)
-[ ] Reviewed active cross-component prompts targeting this component (Principle 7)
+[ ] Checked error dashboard for open reports targeting this component (Principle 7)
 [ ] Checked TASKS.md for this component (Principle 10)
 [ ] Checked component maturity level — work is appropriate for that level (Principle 20)
 ```
@@ -49,7 +49,7 @@ Before completing any work session, verify:
 [ ] Contract tests pass in downstream components if interface was touched (Principle 9)
 [ ] TASKS.md updated if the change resolves or creates a tracked issue (Principle 10)
 [ ] Ran health check again — delta reported (Principle 19)
-[ ] Cross-component prompts created for issues in other components (Principle 7)
+[ ] Bugs in other components reported via report_error MCP tool (Principle 7)
 [ ] Non-obvious discoveries recorded in KNOWLEDGE.md (Principle 18)
 [ ] End-to-end .cln CI tests still pass (Principle 22)
 [ ] No new CRITICAL FIX / WORKAROUND / HACK markers added (Principle 4)
@@ -78,7 +78,7 @@ Not all principles are equal. They are organized in four tiers:
 | 4 | All code is honest |
 | 5 | Testing strategy |
 | 6 | The language server is the single source of truth for IDE intelligence |
-| 7 | Cross-component prompts must be triaged |
+| 7 | Bugs are reported through the error system |
 | 8 | Quality over speed |
 | 9 | Cross-component interfaces are contract-tested |
 | 21 | Every bug fix starts with a failing test |
@@ -165,7 +165,7 @@ Some types and formats are used by multiple components (e.g., the structure of `
 ### Rules
 
 - An AI instance working inside one component must NOT edit files inside another component.
-- When work in one component reveals a bug in another, create a prompt in `management/cross-component-prompts/`.
+- When work in one component reveals a bug in another, call `report_error` via the MCP server. The error is tracked in the website's error dashboard. The developer reviews and directs fixes.
 - Each component has its own CLAUDE.md, CI/CD, and test suite.
 - Reading other components for interface understanding is allowed. Writing is not.
 - Before implementing any function, check `platform-architecture/EXECUTION_LAYERS.md` to confirm the correct layer. If the function is not listed, determine its layer using the decision rule, add it to the execution layers document, then implement.
@@ -473,27 +473,33 @@ The extension previously had hardcoded keyword lists in its TextMate grammar. Wh
 
 ---
 
-## 7. Cross-Component Prompts Must Be Triaged
+## 7. Bugs Are Reported Through the Error System
 
 ### What this means
 
-When an AI instance working in one component discovers a bug in another, it creates a prompt in `management/cross-component-prompts/`. These are the handoff mechanism between component boundaries (Principle 1).
+When an AI instance working in one component discovers a bug in another, it calls `report_error` via the MCP server. The error is ingested by the website's error API, deduplicated via fingerprinting, and appears in the error dashboard. The developer reviews the dashboard and directs which bugs to fix and in which component.
+
+This is the single bug reporting workflow for the entire project. There is no separate file-based prompt system.
 
 ### Why this principle exists
 
-The project accumulated 124 prompts, many stale or obsolete. Without triage, the folder becomes a graveyard of forgotten issues.
+The project previously used a file-based system (`management/cross-component-prompts/`) which accumulated 124 prompts, many stale or obsolete. The centralized error reporting system on the website replaces it with deduplication, analytics, and a dashboard UI. All 124 historical prompts have been resolved and archived.
 
 ### Rules
 
-- Every prompt has a status at the top: `open`, `resolved`, or `obsolete`.
-- `resolved` and `obsolete` prompts move to `management/cross-component-prompts/archive/`.
-- Before starting work on a component, review active prompts targeting that component.
-- New prompts include: **Component**, **Issue Type** (bug/feature/enhancement/compatibility), **Priority** (critical/high/medium/low), **Description** (specific), **Context** (how discovered), **Suggested Fix** (if known), **Files Affected** (specific paths).
-- A prompt that says "something is broken in the server" is not actionable. It must say "function `_http_route` in `clean-server/src/bridge.rs:78` returns i32 but `function-registry.toml` declares the return type as void."
+- When you discover a bug in another component, call `report_error` with: error message, reproduction code, compiler version, and which component is affected.
+- Do NOT create files in `management/cross-component-prompts/` — that system is retired.
+- The developer reviews the error dashboard and decides what to fix and when.
+- Error reports include fingerprinting — duplicate reports are automatically grouped.
+- Before starting work on a component, check the error dashboard for open reports targeting that component.
 
-### Triage responsibility
+### What makes a good error report
 
-When an AI instance begins a work session on a component, it is responsible for triaging any prompts targeting that component that are older than 7 days. Triage means: verify the issue still exists, update the status, and either fix it (if in scope) or re-prioritize it.
+A report that says "something is broken" is not actionable. A good `report_error` call includes:
+- The exact error message from the compiler
+- Minimal `.cln` code that reproduces the issue
+- The compiler version (`cleen --version` or `cln --version`)
+- Which component the bug is in (compiler, server, framework, etc.)
 
 ---
 
@@ -667,7 +673,7 @@ The project experienced "propagation bugs" where a change was made in several co
 
 - **Spec failure (steps 1-2):** Fix the spec. No code has been written yet — cheapest point to iterate.
 - **Compiler failure (steps 3-4):** Fix the compiler. No downstream component is affected.
-- **Server failure (steps 6-7):** The compiler already has the feature. Create a cross-component prompt for the server. The feature is available for compilation but not for execution until the server catches up. Do NOT revert the compiler — that's working code.
+- **Server failure (steps 6-7):** The compiler already has the feature. Report via report_error for the server team. The feature is available for compilation but not for execution until the server catches up. Do NOT revert the compiler — that's working code.
 - **Node server failure (steps 8-9):** Same as server. The Rust server works; the Node server is behind. Create a prompt, do not revert the Rust server.
 
 ### Rule
@@ -924,7 +930,7 @@ Each AI work session starts fresh. If one session discovers that "codegen for st
 - **Surprising behavior** that would waste time if rediscovered. Example: "Pest parser greedily consumes `>` in generic types, causing `Array<Array<integer>>` to fail. The outer `>` is consumed as part of the inner type. The workaround is lookahead, but the real fix requires changes to `type_` rule in grammar.pest."
 - **Fragile areas** where changes have historically caused cascading failures. Example: "Changing function registration order in `src/builtins/registry.rs` breaks all string operations because codegen uses hardcoded Call indices. Must update codegen whenever registry order changes."
 - **Dependency relationships** that aren't obvious from code structure. Example: "The `iterate` statement codegen depends on both the loop codegen AND the list access codegen. Fixing iterate without fixing list indexing first won't work."
-- **Cross-component context** — when the correct fix requires changes in another component and the current state is a known compromise. Example: "Server returns i32 for `_http_route` but registry says void. The server is correct for now — a cross-component prompt exists. Don't change the compiler to match the wrong registry entry."
+- **Cross-component context** — when the correct fix requires changes in another component and the current state is a known compromise. Example: "Server returns i32 for `_http_route` but registry says void. The server is correct for now — a report_error has been filed. Don't change the compiler to match the wrong registry entry."
 
 ### What does NOT go in KNOWLEDGE.md
 
@@ -961,7 +967,7 @@ Before making any changes:
 2. **Read Tier 1 principles** from this document (Principles 1-3) at minimum. Read Tier 3 (Principles 15-18) to know what to work on.
 3. **Run the health check command** for the component. Record the pass/fail state. You need to know what's broken before you start changing things.
 4. **Read KNOWLEDGE.md** for the component. It tells you what previous sessions discovered about fragile areas and non-obvious dependencies.
-5. **Review active cross-component prompts** targeting this component. There may be issues from other components that affect your work.
+5. **Check the error dashboard** for open reports targeting this component. There may be bugs reported by other components that affect your work.
 6. **Check TASKS.md** for this component. Know what's tracked and prioritized.
 7. **Check the component's maturity level** (Principle 20). It determines what kind of work is appropriate.
 
@@ -980,7 +986,7 @@ Before ending the session:
 
 12. **Run the health check command again.** Compare to the start. Report the delta: "Started at 280/379 passing. Ending at 295/379 passing. +15 tests fixed."
 13. **Update TASKS.md:** Mark completed tasks. Add newly discovered issues with dates.
-14. **Create cross-component prompts** for any issues found in other components.
+14. **Report bugs** in other components via `report_error` MCP tool.
 15. **Update KNOWLEDGE.md** if you discovered something non-obvious that would save future sessions time.
 16. **If test pass rate improved:** Note which specific tests now pass and what change fixed them. This helps identify which fixes have the highest compound value.
 
@@ -1402,3 +1408,4 @@ Fixing typos, updating comments, correcting line references, and improving forma
 | 2026-04-11 | Expanded Principle 2 with plugin EBNF grammar extensions. Updated Principle 3 documentation table for plugin specs. |
 | 2026-04-12 | Added Principles 21-23 (Tier 2): bug-fix-first testing, CI tests what ships, one codegen path. Driven by analysis of 129 commits (75 fixes, 3 reverts), 231 CRITICAL FIX markers, dual codegen path regression, and CI gap where 379 .cln tests were never executed. Total: 23 principles. |
 | 2026-04-12 | Added Principles 24-25 (Tier 1): spec-implementation parity, specification change control. The spec and implementation must be a 1-to-1 mirror. AI instances may not modify the spec without developer approval. Total: 25 principles. |
+| 2026-04-14 | Replaced Principle 7 (cross-component prompt files) with centralized error reporting via `report_error` MCP tool → website error dashboard. The file-based system (`management/cross-component-prompts/`) is retired. Single bug workflow: report_error → dashboard → developer directs fix. |

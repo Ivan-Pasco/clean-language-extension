@@ -40,12 +40,54 @@
       "Bash(chmod +x \"/Users/earcandy/Documents/Dev/Clean Language/scripts/full-quality-gate.sh\")",
       "Bash(bash scripts/full-quality-gate.sh --quick)",
       "Bash(read d:*)",
-      "Bash([ -d \"$d.git\" ])"
+      "Bash([ -d \"$d.git\" ])",
+      "Bash(gh run:*)",
+      "Bash(cleen install:*)",
+      "Bash(cleen --version)",
+      "Bash(cleen list:*)",
+      "mcp__clean-language__check_reported_fixes",
+      "Bash(python3 -c \"import sys,json; data=json.load\\(sys.stdin\\); text=data[0]['text']; import re; reports=json.loads\\(text\\); matches=[r for r in reports if r.get\\('id',''\\).startswith\\('44574c1b'\\)]; print\\(json.dumps\\(matches, indent=2\\)\\)\")",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs",
+      "Bash(sed -i '' 's/maximum: 256 }}/maximum: 1024 }}/' clean-language-compiler/src/codegen/bridge_generator/node.rs)",
+      "Bash(sed -i '' 's/allow growth to 256 pages = 16MB/allow growth to 1024 pages = 64MB/' clean-language-compiler/src/codegen/bridge_generator/node.rs)",
+      "Bash(sed -i '' 's/maximum: 256 }}/maximum: 1024 }}/' clean-language-compiler/src/codegen/bridge_generator/browser.rs)",
+      "Bash(sed -i '' 's/allow growth to 256 pages = 16MB/allow growth to 1024 pages = 64MB/' clean-language-compiler/src/codegen/bridge_generator/browser.rs)",
+      "Edit(/.claude/skills/resolve-fix/**)",
+      "Bash(ssh root@165.227.62.95 \"mysql -u cleanuser -pCl3anL4ng2025Pr0d clean_website -e \\\\\"UPDATE error_config SET config_value = '645d63549a37282e107215c429308ac0bf964e4c0c3e31a0fb713ca9d4760bfd' WHERE config_key = 'api_key';\\\\\" && echo 'API key updated successfully'\")",
+      "Bash(mkdir -p ~/.cleen)",
+      "Bash(chmod 600 ~/.cleen/error-api-key)",
+      "Bash(curl -s -o /dev/null -w '%{http_code}' -X POST https://errors.cleanlanguage.dev/api/v1/resolve-batch -H 'Authorization: Bearer __TRACKED_VAR__' -H 'Content-Type: application/json' -d '{\"error_code\": \"TEST_NONEXISTENT\", \"fixed_in_version\": \"0.0.0\", \"fix_description\": \"test\", \"resolved_by\": \"test\"}')",
+      "Bash(curl -s -X POST https://errors.cleanlanguage.dev/api/v1/resolve-batch -H 'Authorization: Bearer __TRACKED_VAR__' -H 'Content-Type: application/json' -d '{\"error_code\": \"TEST_NONEXISTENT\", \"fixed_in_version\": \"0.0.0\", \"fix_description\": \"test\", \"resolved_by\": \"test\"}')",
+      "Bash(curl -s \"https://errors.cleanlanguage.dev/api/v1/health\")",
+      "Bash(curl -s \"https://errors.cleanlanguage.dev/api/v1/bugs?component=compiler&status=open\")",
+      "Bash(curl -s -X POST https://errors.cleanlanguage.dev/api/v1/resolve-batch -H 'Authorization: Bearer __TRACKED_VAR__' -H 'Content-Type: application/json' -d '{\"error_code\":\"TEST_NONEXISTENT\",\"fixed_in_version\":\"0.0.0\",\"fix_description\":\"test\",\"resolved_by\":\"test\"}')",
+      "Bash(ssh root@165.227.62.95 \"ls -la /var/www/clean-website/dist/errors.wasm 2>/dev/null && date -r /var/www/clean-website/dist/errors.wasm\")",
+      "Bash(ssh root@165.227.62.95 \"find /var/www -name 'errors.wasm' -o -name 'errors_main*' 2>/dev/null; find /opt -name 'errors.wasm' 2>/dev/null; find / -maxdepth 4 -name 'errors.wasm' 2>/dev/null\")",
+      "Bash(python3 -c \"import datetime; print\\(datetime.datetime.fromtimestamp\\(1771611350\\)\\)\")",
+      "Bash(DEPLOY_HOST=165.227.62.95 bash deploy.sh)",
+      "Bash(ssh root@165.227.62.95 \"systemctl status clean-server clean-errors --no-pager -l 2>&1 | head -30\")",
+      "Bash(ssh root@165.227.62.95 \"journalctl -u clean-server --since '5 min ago' --no-pager 2>&1 | tail -20\")",
+      "Bash(ssh root@165.227.62.95 \"/opt/clean-website/bin/clean-server --version 2>&1 || echo 'no version flag'\")",
+      "Bash(ssh root@165.227.62.95 \"which rustc 2>/dev/null && rustc --version 2>/dev/null || echo 'Rust not installed'\")",
+      "Bash(curl -s \"https://errors.cleanlanguage.dev/api/v1/bugs?component=codegen&status=open\")",
+      "Bash(curl -s \"https://errors.cleanlanguage.dev/api/v1/bugs?component=parser&status=open\")",
+      "Bash(curl -s \"https://errors.cleanlanguage.dev/api/v1/bugs?component=semantic&status=open\")",
+      "Bash(curl -s \"https://errors.cleanlanguage.dev/api/v1/bugs?component=runtime&status=open\")",
+      "Bash(curl -s \"https://errors.cleanlanguage.dev/api/v1/bugs?component=plugin&status=open\")",
+      "Bash(python3 -c ':*)",
+      "Bash(ssh root@165.227.62.95 \"mysql -u cleanuser -pCl3anL4ng2025Pr0d clean_website -e \\\\\"SELECT fingerprint, error_code, error_component, canonical_message, status, fixed_in_version, occurrence_count FROM error_fingerprints WHERE status = 'open' ORDER BY error_component, priority_score DESC;\\\\\" 2>/dev/null\")",
+      "Bash(ssh root@165.227.62.95 \"mysql -u cleanuser -pCl3anL4ng2025Pr0d clean_website -e \\\\\"SELECT status, COUNT\\(*\\) as count FROM error_fingerprints GROUP BY status;\\\\\" 2>/dev/null\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://errors.cleanlanguage.dev/errors\")",
+      "Bash(python3 -c \"import sys,json; d=json.loads\\(sys.stdin.read\\(\\)\\); print\\(f'Open codegen bugs: {d[\\\\\"total\\\\\"]}'\\)\")",
+      "Bash(python3 -c \"import sys,json; d=json.loads\\(sys.stdin.read\\(\\)\\); print\\(f'Open runtime bugs: {d[\\\\\"total\\\\\"]}'\\)\")"
     ],
     "additionalDirectories": [
       "/Users/earcandy/Documents/Dev/Clean Language/.claude/skills",
       "/Users/earcandy/Documents/Dev/Clean Language/.claude",
-      "/Users/earcandy/Documents/Dev/Clean Language/.git/hooks"
+      "/Users/earcandy/Documents/Dev/Clean Language/.git/hooks",
+      "/Users/earcandy/Documents/Dev/Clean Language/Web Site Clean/.claude",
+      "/Users/earcandy/Documents/Dev/Clean Language/Web Site Clean/.claude/rules"
     ]
   },
   "hooks": {
@@ -67,7 +109,7 @@
         "hooks": [
           {
             "type": "prompt",
-            "prompt": "The user is editing a file. Check if the file path in $ARGUMENTS is in a DIFFERENT component folder than the current working directory. Component folders are: clean-language-compiler/, clean-server/, clean-framework/, clean-extension/, clean-manager/, clean-canvas/, clean-ui/, clean-node-server/, clean-llm/, clean-cpanel-plugin/. Shared locations (spec/, management/, platform-architecture/, scripts/, .claude/, CLAUDE.md, TASKS.md) are ALLOWED from any component. If the edit crosses component boundaries (editing a file in clean-server/ while working in clean-language-compiler/), output JSON with decision block and reason. Otherwise allow."
+            "prompt": "The user is editing a file. Check if the file path in $ARGUMENTS is in a DIFFERENT component folder than the current working directory. Component folders are: clean-language-compiler/, clean-server/, clean-framework/, clean-extension/, clean-manager/, clean-canvas/, clean-ui/, clean-node-server/, clean-llm/, clean-cpanel-plugin/, Web Site Clean/. Shared locations (spec/, management/, platform-architecture/, scripts/, .claude/, CLAUDE.md, TASKS.md) are ALLOWED from any component. If the edit crosses component boundaries (editing a file in clean-server/ while working in clean-language-compiler/), output JSON with decision block and reason. Otherwise allow."
           }
         ]
       },

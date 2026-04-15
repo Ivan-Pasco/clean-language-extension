@@ -282,39 +282,18 @@ The Clean Language project is organized into multiple components, each in its ow
 | MCP | `Clean MCP/` | Model Context Protocol |
 | cPanel Plugin | `clean-cpanel-plugin/` | cPanel hosting plugin |
 
-### Cross-Component Issue Process
+### Cross-Component Bug Reporting
 
-Instead of directly modifying another component:
+When you discover a bug in another component, do NOT fix it directly. Instead:
 
-1. **Document the issue** by creating a prompt/task description
-2. **Save the prompt** in `management/cross-component-prompts/`
-3. **The prompt will be executed** by the AI instance working in the correct folder
-
-### Prompt Format for Cross-Component Issues
-
-```
-Component: [target component name]
-Issue Type: [bug/feature/enhancement/compatibility]
-Priority: [critical/high/medium/low]
-Description: [Detailed description of the issue discovered]
-Context: [Why this was discovered while working in the current component]
-Suggested Fix: [If known, describe the potential solution]
-Files Affected: [List of files in the target component that need changes]
-```
-
-### Why This Rule Exists
-
-- Each component has its own context, dependencies, and testing requirements
-- AI instances are optimized for their specific component's codebase
-- Cross-component changes without proper context can introduce bugs
-- This maintains clear boundaries and accountability
-- Ensures changes are properly tested in the target component's environment
+1. **Call `report_error`** via the MCP server with: error message, reproduction code, compiler version, and affected component
+2. The error is tracked in the website's error dashboard with automatic deduplication
+3. The developer reviews the dashboard and directs fixes
 
 ### What You CAN Do
 
 - Read files from other components to understand interfaces
-- Document compatibility issues found
-- Create detailed prompts for the correct AI instance
+- Report bugs via `report_error` MCP tool
 - Update your component to work with existing interfaces
 
 ### What You MUST NOT Do
@@ -322,4 +301,3 @@ Files Affected: [List of files in the target component that need changes]
 - Directly edit code in other components
 - Make changes to other components' configuration files
 - Modify shared resources without coordination
-- Skip the prompt creation step for cross-component issues

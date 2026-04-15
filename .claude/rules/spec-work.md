@@ -27,7 +27,7 @@ When changing the specification (after developer approval):
 2. Update `spec/semantic-rules.md` if semantic behavior changes
 3. Update `spec/type-system.md` if type rules change
 4. Update `Language-Specification.md` prose to match
-5. File a cross-component prompt for compiler implementation
+5. Report via `report_error` MCP tool for compiler implementation
 
 ## Documentation Has One Home (Principle 3)
 - Each fact is documented in exactly one place

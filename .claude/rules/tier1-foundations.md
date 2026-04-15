@@ -8,7 +8,7 @@ alwaysApply: true
 
 ## Component Isolation (Principle 1)
 - Each component lives in its own folder. Do NOT edit files in other components.
-- If you discover a bug in another component, create a prompt in `management/cross-component-prompts/`.
+- If you discover a bug in another component, call `report_error` via the MCP server.
 - Exception: `spec/`, `management/`, `platform-architecture/` are shared.
 
 ## Execution Layers (Principle 1)
