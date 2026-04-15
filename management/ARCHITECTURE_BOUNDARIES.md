@@ -192,6 +192,21 @@ Before implementing ANY new function or file, ask:
 | Does this function manage version switching? | Only belongs in manager |
 | Does this add a keyword/type/function to the IDE extension? | Only belongs in language server (in compiler) |
 | Does this load plugin.toml for IDE features? | Only belongs in language server (in compiler) |
+| Does this function know about HTML tags, attributes, or template syntax? | Only belongs in plugins (frame.ui) |
+| Does this function replicate logic that already exists in a plugin? | **STOP — fix the plugin or the compiler bug that breaks the plugin** |
+
+## The Workaround Trap (CRITICAL)
+
+**When a plugin produces incorrect output, the fix is NEVER to reimplement the plugin's logic in the compiler.** This is the most common form of boundary violation.
+
+The correct response when plugin output is broken:
+
+1. **Identify WHY the plugin output is wrong** — is it a plugin source bug or a compiler codegen bug?
+2. **If compiler codegen bug:** Fix the codegen so the plugin WASM executes correctly. Then recompile the plugin.
+3. **If plugin source bug:** Report via cross-component prompt. Do not duplicate the logic in the compiler.
+4. **NEVER copy plugin logic into the compiler** as a "workaround" — even temporarily. Workarounds become permanent, create maintenance burden, and violate the execution layer model.
+
+**Real example (2026-04-15):** The frame.ui plugin's `html_block_to_code` produced corrupted attribute names due to a compiler codegen bug (substring results in multi-part string concatenation produced null bytes). The WRONG fix was to reimplement `html_block_to_code` in Rust inside the compiler's `wasm_adapter.rs` (~300 lines of HTML parsing). The RIGHT fix was to find and fix the codegen bug so the plugin's own WASM executes correctly.
 
 ## What To Do When You Discover a Boundary Violation
 
@@ -207,5 +222,6 @@ Before implementing ANY new function or file, ask:
 | 2026-02-23 | clean-manager | ~2,900 lines of framework codegen/discovery/build logic | Documented — pending extraction |
 | 2026-02-23 | Web Site Clean | 16 structural violations against Frame spec | Documented — pending restructure |
 | 2026-03-23 | clean-extension | Hardcoded language keywords in TextMate grammar + plugin-loader.ts duplicates language server responsibility | Documented — pending refactor to thin client (see IDE_EXTENSION_ARCHITECTURE.md) |
+| 2026-04-15 | clean-language-compiler | ~300 lines of HTML template parsing (html_block_to_code_rust) added to wasm_adapter.rs — duplicates frame.ui plugin logic | Reverted — root cause was codegen bug, not plugin logic |
 
 When a violation is found and documented, add it to this table for tracking.
