@@ -11,6 +11,24 @@ alwaysApply: true
 - If you discover a bug in another component, call `report_error` via the MCP server.
 - Exception: `spec/`, `management/`, `platform-architecture/` are shared.
 
+## Error Report Lifecycle (Principle 1.1)
+Every reported error has a mandatory 5-stage lifecycle. A fix is NOT "finished" until all stages are verified:
+
+| Stage | Meaning | Verified by |
+|---|---|---|
+| 1. `reported` | Bug logged via `report_error` | MCP call |
+| 2. `fix_committed` | Code fix pushed to git | commit hash referencing the error |
+| 3. `fix_released` | Tagged release with CI pass | `gh run list` + `git tag` |
+| 4. `fix_installed` | Active in local dev env | `cln --version` / `cleen frame list` |
+| 5. `resolved` | Dashboard closed + users notified | `/resolve-fix` backend ACK |
+
+Rules:
+1. At session start, call `check_reported_fixes` to see if bugs in your component already have fixes pending resolution.
+2. When you fix a reported bug, run `comita` to reach stages 2-4, then `/resolve-fix <ERROR_CODE> <VERSION> "<description>"` for stage 5.
+3. `/resolve-fix` verifies each stage before marking resolved. If stage 4 fails (not installed locally), the bug stays open.
+4. Only the component that OWNS the fix calls `/resolve-fix`. Never resolve bugs fixed in other components.
+5. A fix that is not taken through stage 5 leaves stale "reported" entries and users are never notified.
+
 ## Execution Layers (Principle 1)
 - Before implementing any function, check `platform-architecture/EXECUTION_LAYERS.md`.
 - Layer 0 (Compiler): Parse, analyze, generate WASM imports — NOT implementations.
