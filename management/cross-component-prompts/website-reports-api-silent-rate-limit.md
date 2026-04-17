@@ -1,20 +1,24 @@
-# Bug: `POST /api/v1/reports` returns `status: received` for rate-limited requests
+# Bug: `/errors` public page and `/errors/detail?fp=<fp>` under-report persisted reports
 
 ## Component
 `clean-website` (error dashboard + API)
 
 ## Issue Type
-Bug — silent data loss
+Bug — dashboard visibility, not data loss
 
 ## Priority
-Critical — blocks every cross-component bug report that flows through the compiler MCP. Reports appear to succeed but are never persisted, so the ecosystem-wide bug tracker silently drops most incoming data.
+Medium — reports are persisted (verified by authenticated server session — 37 total, 28 resolved, 2 open, 7 in other states). The issue is that the unauthenticated / public dashboard view shows only ~3 fingerprints at a time, and direct-detail URLs return "fingerprint not found" for valid fingerprints.
+
+## Correction note — 2026-04-17
+
+Original report claimed silent data loss. Later verification from a clean-server instance shows the reports DID persist — they just don't appear on the public `/errors` HTML summary that the compiler team was reading via unauthenticated `curl`. Leaving the prompt so the remaining genuine issues (detail page 404s, unauthenticated view subset) are still tracked.
 
 ## Discovered
-2026-04-17 during a session where the compiler team submitted ~10 bug reports via `report_error` MCP tool. Only 3 fingerprints ended up visible on `errors.cleanlanguage.dev/errors`; the rest returned success but did not persist.
+2026-04-17 during a session where the compiler team submitted ~10 bug reports via `report_error` MCP tool. Only 3 fingerprints ever became visible on `errors.cleanlanguage.dev/errors` via unauthenticated fetch, but an authenticated server session confirmed 37 reports exist and only 2 are currently open.
 
 ## Problem
 
-The `/api/v1/reports` endpoint has **two failure modes that look identical to successful persistence** from the client's perspective:
+The `/api/v1/reports` endpoint has **one genuine failure mode** (explicit rate-limiting after quota hit) and **one apparent visibility issue** (unauthenticated dashboard HTML showing a narrow subset) that together LOOK like silent data loss from the client's perspective:
 
 1. **Silent rate-limit acceptance (documented observation):**
    ```
