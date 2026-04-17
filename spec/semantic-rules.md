@@ -12,7 +12,7 @@ Every rule has a numbered code. When the compiler rejects code for a semantic re
 
 | Range | Category | Phase |
 |-------|----------|-------|
-| SYN001–SYN006 | Syntax (parser) | Parsing |
+| SYN001–SYN007 | Syntax (parser) | Parsing |
 | SEM001–SEM009 | Semantic (type, scope, access) | HIR validation, resolver, type checker |
 | COM001–COM006 | Compilation (codegen, module) | Code generation |
 | RUN001–RUN005 | Runtime (execution) | WASM execution |
@@ -38,6 +38,32 @@ A syntax structure is partially correct but missing required elements.
 
 ### SYN006 — Indentation Error
 Tab/space mixing detected, or indentation does not match the expected level for the current block.
+
+### SYN007 — Section Out of Order
+The 5 core top-level sections must appear in the order defined by
+`Clean_Language_Specification.md` §"File Structure":
+
+```
+import:  →  start:  →  state:  →  class  →  functions:
+```
+
+Each section is optional, but when present they must follow this order.  Auxiliary
+sections (`tests:`, `external:`, `watch:`, `screen:`, framework blocks, `apply`,
+`private:`) may appear at any position and are not subject to this rule.
+
+**Example (fails — SYN007):**
+```clean
+functions:
+    integer add(integer a, integer b)
+        return a + b
+
+start:                              // error: 'start:' must appear before 'functions:'
+    print(add(2, 3))
+```
+
+**Exception:** Parsers invoked with lenient section ordering (used for plugin-
+generated code) skip this rule.  User-written `.cln` source always has the rule
+applied.
 
 ---
 

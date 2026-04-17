@@ -541,8 +541,37 @@ function_nested_block
 (* 6. TOP-LEVEL DECLARATIONS                                                *)
 (* ======================================================================== *)
 
-program         = { empty_line } , { program_item , { empty_line } } ;
+(* The 5 core sections MUST appear in the order: import → start → state →
+   class → functions (each is optional).  Auxiliary sections (tests, external,
+   watch, screen, framework, apply, private) may be interleaved at any
+   position.  This ordering is mandated by Clean_Language_Specification.md
+   §"File Structure" and enforced by the parser as a semantic rule. *)
 
+program         = { empty_line }
+                , { auxiliary_item , { empty_line } }
+                , [ import_block , { empty_line } | { import_statement , { empty_line } } ]
+                , { auxiliary_item , { empty_line } }
+                , [ start_block , { empty_line } ]
+                , { auxiliary_item , { empty_line } }
+                , [ state_block , { empty_line } ]
+                , { auxiliary_item , { empty_line } }
+                , { class_declaration , { empty_line } }
+                , { auxiliary_item , { empty_line } }
+                , [ functions_block , { empty_line } ]
+                , { auxiliary_item , { empty_line } } ;
+
+(* Auxiliary program items are not subject to the core ordering rule. *)
+auxiliary_item  = private_block
+                | external_block
+                | watch_block
+                | screen_block
+                | framework_block
+                | tests_block
+                | apply_block ;
+
+(* Full set of items that can appear at the top level (flat enumeration for
+   reference; the `program` production above expresses the ordering
+   constraint that applies to the 5 core sections). *)
 program_item    = import_block
                 | import_statement
                 | private_block
