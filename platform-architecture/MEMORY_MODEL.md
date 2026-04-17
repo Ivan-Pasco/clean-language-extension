@@ -150,6 +150,8 @@ impl WasmMemory {
 | Max pages | 1024 (64MB) | 1024 (64MB) | No memory cost until grow is called |
 | Page size | 65536 (64KB) | 65536 (64KB) | WASM standard |
 
+> **For memory budgets, tier definitions, growth strategy, StoreLimits, and per-target configuration, see [MEMORY_POLICY.md](./MEMORY_POLICY.md).** This document covers layout only.
+
 ## Memory Growth
 
 WASM memory starts at its initial page count and can grow up to the declared maximum:

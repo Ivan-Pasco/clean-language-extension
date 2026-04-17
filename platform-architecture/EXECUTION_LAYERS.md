@@ -249,6 +249,9 @@ This document defines the authoritative execution layer architecture for the Cle
 | `_crypto_hash_sha256` | Compute SHA256 |
 
 ### Memory Runtime (5 functions)
+
+> **Memory growth decisions** (budgets, tiers, StoreLimits, growth factor) are defined in [MEMORY_POLICY.md](./MEMORY_POLICY.md). Layer 2 is responsible for executing `memory.grow()` when the host bridge allocates on behalf of the module. The host runtime (Layer 3 for servers, browser for web targets) gates growth via `StoreLimits` or equivalent.
+
 | Function | Description |
 |----------|-------------|
 | `mem_alloc` | Allocate memory |

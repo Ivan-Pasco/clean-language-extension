@@ -8,6 +8,7 @@ This document describes the runtime architecture for Clean Language, explaining 
 - **[IDE Extension Architecture](./IDE_EXTENSION_ARCHITECTURE.md)** - **CRITICAL: Language Server as single source of truth for IDE**
 - [Host Bridge Specification](./HOST_BRIDGE.md) - Portable host functions (Layer 2)
 - [Memory Model](./MEMORY_MODEL.md) - WASM memory layout and allocation
+- **[Memory Policy](./MEMORY_POLICY.md)** - **Memory budgets, growth strategy, StoreLimits, and observability**
 - [Server Extensions](./SERVER_EXTENSIONS.md) - HTTP server-specific functions (Layer 3)
 - [Implementing a New Host](./IMPLEMENTING_HOST.md) - Guide for new runtime implementations
 
