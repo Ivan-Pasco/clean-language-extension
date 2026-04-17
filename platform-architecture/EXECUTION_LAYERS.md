@@ -87,6 +87,112 @@ This document defines the authoritative execution layer architecture for the Cle
 
 ---
 
+## Import Minimality Rule
+
+**Principle:** The compiler MUST emit a WASM `(import …)` declaration
+only for host functions that are referenced (directly or transitively)
+by the compiled module.
+
+**Rationale:**
+A WASM module's import list is a hard contract with its host. If the
+compiler emits imports for every host function the language knows
+about, every host must provide — or at minimum stub — all of them. This
+defeats the Layer 2 / Layer 3 separation defined below:
+
+- A **browser host** (client-only) cannot provide Layer 3 functions
+  like `_http_listen`, `_session_get`, `_auth_*`. Emitting them forces
+  every browser runtime to ship dead stubs.
+- A **CLI host** (no HTTP stack) cannot provide `http_get`, `http_post`.
+  Emitting them forces non-networked hosts to stub them.
+- A **minimal embedded host** may provide only Layer 1 + a subset of
+  Layer 2. Unused imports enlarge the host's required surface area
+  without serving any program behavior.
+
+**Requirement (Compiler — Layer 0):**
+1. The compiler MUST perform reachability analysis over the call graph
+   rooted at the module's exports (`start`, exported functions,
+   `main`).
+2. For each host function in the compiler registry (Layer 2) or plugin
+   bridge (Layer 4), emit a WASM import ONLY IF that function is
+   reachable from an export.
+3. Unused plugin imports MUST NOT appear in the output `.wasm`.
+4. Tree-shaking operates at the WASM-import granularity; it does not
+   require removing unused Clean functions from the module body
+   (though that is permitted).
+
+**Requirement (Hosts — Layer 2 / 3 / 4):**
+1. Hosts MUST provide every function a module actually imports.
+2. Hosts are NOT required to provide stubs for functions the module
+   does not import.
+3. A host MAY reject a module whose imports exceed the host's
+   supported surface (e.g. a browser host rejecting `_http_listen`).
+
+**Always-on exceptions (never gated by reachability):**
+The following imports are always emitted regardless of reachability.
+They are fundamental to every non-trivial program, cheap for any host
+to provide, and invoked from synthesized codegen that does not have
+a 1:1 MIR call entry (so a reachability set computed from MIR would
+miss them):
+
+- `print`, `printl`, `print_string` — basic stdout, required to emit
+  any observable output.
+- `memory_runtime.*` (`mem_alloc`, `mem_retain`, `mem_release`,
+  `mem_scope_push`, `mem_scope_pop`) — core reference-counted memory.
+- `float_to_string`, `string_to_float` — invoked by synthesized
+  JSON/integer formatting paths after reachability is already computed.
+- String primitives referenced by stdlib wrappers
+  (`string.concat`, `string.split`, `string_compare`, `string_replace`)
+  — dead-stripping these leaves library wrappers with dangling `Call`
+  targets. Per-method tree-shaking here requires stdlib wrapper
+  registration to become lazy.
+- `list.push_f64` — same reason as the string primitives above.
+
+Every other Layer 2 / Layer 3 / plugin bridge function MUST be gated
+on reachability.
+
+**Test (mandatory compliance — current):** A client-only program
+(`plugins: frame.ui` only, no server / DB / HTTP-client / filesystem /
+crypto / math use) MUST produce a `.wasm` whose import section contains:
+
+- **Zero Layer 3 functions** (`_http_*`, `_req_*`, `_res_*`,
+  `_session_*`, `_auth_*`).
+- **Zero Layer 2 external-I/O functions**: HTTP client (`http_*`),
+  file I/O (`file_*`), database (`_db_*`), crypto
+  (`_crypto_*` / `crypto_*`).
+- **Zero Layer 2 transcendental math functions**: `math_*` (sin, cos,
+  pow, etc.).
+
+Only the always-on exceptions listed above may appear in addition to
+the plugin-declared bridge functions the program actually calls.
+
+**Test (planned strengthening — not yet mandatory):** The following
+categories are Layer 2 and SHOULD be reachability-gated under the
+general principle, but implementing them requires making stdlib
+wrapper registration reachability-aware so wrapper bodies don't retain
+stale import indices. Tracked in the compiler TASKS:
+
+- Typed console input: `input_integer`, `input_float`, `input_yesno`,
+  `input_range` (plain `input` remains always-on — fundamental I/O).
+
+Once that refactor lands, the mandatory test above will be extended
+to also require zero for these.
+
+**Gating strategy (implementation guidance):**
+Layer 3 and Layer 2 external-I/O gates are applied at the
+`register_import_function` boundary via an `is_reachability_gated_import`
+check. Stdlib categories whose wrapper functions embed captured import
+indices (math, http client wrappers, file wrappers) must instead be
+gated at the **class-registration call site** — e.g., the whole
+`register_math_operations` call is skipped when no `math.*` is
+reachable. This keeps imports and their wrappers removed together and
+avoids stack-unbalanced WASM from wrappers pointing at shifted indices.
+The HTTP / file / math classes all use this pattern.
+
+**Non-goal:** This rule does not require dead-code elimination of Clean
+functions, constants, or data. It concerns the import section only.
+
+---
+
 ## Layer 1: Pure WASM (WASM Runtime)
 
 **Purpose:** Execute pure computational operations within the WASM sandbox.
