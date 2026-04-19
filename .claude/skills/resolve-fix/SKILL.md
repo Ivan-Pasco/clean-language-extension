@@ -1,27 +1,29 @@
 # /resolve-fix — Close Out a Reported Error Through the Full Lifecycle
 
-After fixing a bug that was reported via `report_error`, verify the fix has actually reached the local dev environment before marking the report resolved. A fix is not "finished" until all lifecycle stages have been verified.
+After fixing a bug that was reported via `report_error`, verify the fix has actually reached the local dev environment, then mark the report resolved on the **server**. The server is the only source of truth for resolution status — this skill never reads or writes any local state store.
 
 ## Lifecycle Stages
 
-Every reported error moves through these stages. The skill enforces all of them before marking `resolved`:
+Every reported error moves through these stages. The skill enforces all of them before posting `resolved` to the server:
 
-| Stage | Field | Verified by |
+| Stage | Verified by | Where it lives |
 |---|---|---|
-| 1. `reported` | initial | `report_error` MCP call |
-| 2. `fix_committed` | `fix_commit` | git log shows commit with the fix |
-| 3. `fix_released` | `fix_released_tag`, `fix_release_run` | git tag exists + GH release workflow conclusion == success |
-| 4. `fix_installed` | `fix_installed_version`, `fix_installed_at` | `cln --version` / `cleen frame list` shows the new version as active |
-| 5. `resolved` | `resolved_at`, `notified` | backend ACK + local store updated |
+| 1. `reported` | `report_error` MCP call | Server |
+| 2. `fix_committed` | git log shows commit referencing the error | Local git (read-only) |
+| 3. `fix_released` | git tag exists + GH release workflow conclusion == success | Git + GitHub (read-only) |
+| 4. `fix_installed` | `cln --version` / `cleen frame list` shows the new version active | Local install (read-only) |
+| 5. `resolved` | server `/api/v1/resolve-batch` returns success | Server |
 
-If any stage fails verification, the skill stops and reports which stage needs attention. It does NOT flip status to resolved on partial progress.
+If any stage fails verification, the skill stops and reports which stage needs attention. It does NOT post resolution on partial progress.
+
+See `management/ERROR_REPORTING_WORKFLOW.md` for why local state is never used here.
 
 ## Usage
 
-- `/resolve-fix <ERROR_CODE> <VERSION> "<description>"` — run full lifecycle verification for all reports with that error code
+- `/resolve-fix <ERROR_CODE> <VERSION> "<description>"` — full lifecycle verification + server resolve for all reports with that error code
 - `/resolve-fix fingerprint <FP> <VERSION> "<description>"` — single fingerprint
-- `/resolve-fix check` — list open reports and which stage they are stuck at
-- `/resolve-fix status <ERROR_CODE>` — show the full lifecycle status of reports with that error code
+- `/resolve-fix check` — list bugs the server still has open and which stage they're stuck at locally
+- `/resolve-fix status <ERROR_CODE>` — show server-side lifecycle status for that error code
 
 ## Instructions
 
@@ -50,7 +52,7 @@ git log --all --grep="<REPORT_ID>" --format="%h %s" -n 5
 If no commit is found, STOP and report:
 > Stage 2 (fix_committed) failed: no git commit references `<ERROR_CODE>`. Make the fix first, then re-run `/resolve-fix`.
 
-Record the commit hash for Stage 5 payload.
+Record the commit hash for the Stage 5 payload.
 
 ### Step 2: Verify Stage 3 — fix_released
 
@@ -87,23 +89,16 @@ If `installed` does not match `<VERSION>` (or `frame_installed` for framework fi
 
 ### Step 4: Compile a Sanity Test (Optional but Recommended)
 
-If the report's minimal_repro is available in the local store, compile it with the installed version. If the error reproduces, STOP — the "fix" didn't actually fix anything.
-
+Pull the bug's `minimal_repro` from the server (not local) and try to reproduce:
 ```bash
-python3 -c "
-import json, os
-p = os.path.expanduser('~/.cleen/telemetry/reported_errors.json')
-store = json.load(open(p))
-for r in store['reports']:
-    if r.get('error_code') == '<ERROR_CODE>' and r.get('minimal_repro'):
-        print(r['minimal_repro'])
-        break
-" > /tmp/repro.cln
+curl -s -H "X-API-Key: $ERROR_API_KEY" \
+  "https://errors.cleanlanguage.dev/api/v1/bugs?error_code=<ERROR_CODE>&status=open" | \
+  jq -r '.bugs[0].minimal_repro' > /tmp/repro.cln
 
-cln compile /tmp/repro.cln --output /tmp/repro.wasm
+[ -s /tmp/repro.cln ] && cln compile /tmp/repro.cln --output /tmp/repro.wasm
 ```
 
-Missing reproductions → skip this step.
+If the error reproduces, STOP — the "fix" didn't actually fix anything. If no `minimal_repro` is on the server, skip this step.
 
 ### Step 5: Call the Backend Resolve API
 
@@ -123,70 +118,17 @@ curl -s -X POST "https://errors.cleanlanguage.dev/api/v1/resolve-batch" \
 
 For single-fingerprint mode, use `POST /api/v1/fingerprints/<FP>/resolve` with the same payload.
 
-Note: if the server returns `"resolved": 0`, the fingerprints were never ingested server-side — this is a telemetry upload bug, not a resolution failure. Continue and mark locally.
+If the server returns `"resolved": 0`:
+> Server reports 0 fingerprints resolved for `<ERROR_CODE>`. Either the bug was never reported (server has no record), or it was already resolved. Verify with `/resolve-fix status <ERROR_CODE>`.
 
-### Step 6: Update Local Store with Full Lifecycle Payload
-
-The local store is the source of truth when the server is behind:
-```bash
-python3 - <<'PYEOF'
-import json, os, subprocess
-from datetime import datetime, timezone
-
-path = os.path.expanduser('~/.cleen/telemetry/reported_errors.json')
-with open(path) as f:
-    store = json.load(f)
-
-ERROR_CODE = "<ERROR_CODE>"
-VERSION = "<VERSION>"
-DESC = "<DESCRIPTION>"
-COMMIT = subprocess.check_output(['git','log','-1','--format=%H'],cwd='.').decode().strip()
-NOW = datetime.now(timezone.utc).isoformat()
-
-# Determine active version for the component
-try:
-    cln_ver = subprocess.check_output(['cln','--version']).decode().strip().split()[-1]
-except Exception:
-    cln_ver = None
-
-changed = 0
-for r in store.get('reports', []):
-    if r.get('error_code') != ERROR_CODE:
-        continue
-    if r.get('status') == 'resolved':
-        continue
-    r['status'] = 'resolved'
-    r['resolved_in'] = VERSION
-    r['resolved_at'] = NOW
-    r['fix_description'] = DESC
-    r['fix_commit'] = COMMIT
-    r['fix_released_tag'] = f'v{VERSION}'
-    r['fix_installed_version'] = cln_ver or VERSION
-    r['fix_installed_at'] = NOW
-    r['workflow'] = {
-        'reported': True,
-        'fix_committed': True,
-        'fix_released': True,
-        'fix_installed': True,
-        'resolved': True,
-    }
-    r['notified'] = False
-    changed += 1
-
-with open(path, 'w') as f:
-    json.dump(store, f, indent=2)
-print(f'Updated {changed} local report(s) to resolved')
-PYEOF
-```
-
-### Step 7: Report Results
+### Step 6: Report Results
 
 ```
 Resolved: <ERROR_CODE> — "<DESCRIPTION>"
   ✓ Stage 2 fix_committed:  <commit_hash>
   ✓ Stage 3 fix_released:   v<VERSION>  (release run #<N>)
   ✓ Stage 4 fix_installed:  cln <installed_version> active
-  ✓ Stage 5 resolved:       backend ACK (<server_resolved_count> fp), M local report(s) updated
+  ✓ Stage 5 resolved:       server marked <N> fingerprint(s) resolved
   Notifications: users who reported this error will be notified on next check
 ```
 
@@ -194,46 +136,36 @@ If any stage was skipped, list it explicitly so the user knows what is still pen
 
 ## Check Mode — Show Pipeline Status
 
-`/resolve-fix check` — list open reports by lifecycle stage:
+`/resolve-fix check` — list bugs the server still has open, with the local stage they're stuck at:
 
 ```bash
-python3 - <<'PYEOF'
-import json, os
-path = os.path.expanduser('~/.cleen/telemetry/reported_errors.json')
-with open(path) as f:
-    store = json.load(f)
-
-STAGE_ORDER = ['reported','fix_committed','fix_released','fix_installed','resolved']
-
-for r in store.get('reports', []):
-    status = r.get('status','reported')
-    if status in ('resolved','wont_fix'):
-        continue
-    wf = r.get('workflow', {})
-    # Determine farthest reached stage
-    reached = max((i for i, s in enumerate(STAGE_ORDER) if wf.get(s)), default=0)
-    stage = STAGE_ORDER[reached]
-    print(f"{r.get('error_code','?'):30} {stage:20} {r.get('summary','')[:60]}")
-PYEOF
+API_KEY=$(cat ~/.cleen/error-api-key)
+for component in compiler codegen parser semantic runtime plugin extension website unknown; do
+  curl -s -H "X-API-Key: $API_KEY" \
+    "https://errors.cleanlanguage.dev/api/v1/bugs?component=$component&status=open"
+done | jq -r '.bugs[]? | "\(.error_code)\t\(.fingerprint[:12])\t\(.canonical_message[:60])"' | \
+while IFS=$'\t' read -r code fp msg; do
+  # For each open bug, check whether a local commit, tag, or installed version satisfies any stage
+  commit=$(git log --all --grep="$code" --format=%h -n 1 2>/dev/null)
+  if [ -z "$commit" ]; then
+    stage="reported"
+  else
+    stage="fix_committed (need release/install)"
+  fi
+  printf "%-25s %-14s %-32s %s\n" "$code" "$fp" "$stage" "$msg"
+done
 ```
 
 ## Status Mode — Inspect One Error Code
 
-`/resolve-fix status <ERROR_CODE>` — show every lifecycle field for matching reports:
+`/resolve-fix status <ERROR_CODE>` — show server-side state for that error code:
 
 ```bash
-python3 - <<'PYEOF'
-import json, os
-path = os.path.expanduser('~/.cleen/telemetry/reported_errors.json')
-with open(path) as f:
-    store = json.load(f)
-code = "<ERROR_CODE>"
-for r in store.get('reports', []):
-    if r.get('error_code') == code:
-        print(f"\n=== {r['report_id']} ===")
-        for k in ('status','fix_commit','fix_released_tag','fix_installed_version','fix_installed_at','resolved_at','notified'):
-            print(f"  {k}: {r.get(k)}")
-PYEOF
+API_KEY=$(cat ~/.cleen/error-api-key)
+for component in compiler codegen parser semantic runtime plugin extension website unknown; do
+  curl -s -H "X-API-Key: $API_KEY" \
+    "https://errors.cleanlanguage.dev/api/v1/bugs?component=$component&error_code=<ERROR_CODE>"
+done | jq '.bugs[]? | {fingerprint, status, occurrences, first_seen, last_seen, fixed_in_version, fix_commit, resolved_at}'
 ```
 
 ## Why This Matters
@@ -243,8 +175,9 @@ A fix in git is not a fix. A release on GitHub is not a fix. A fix is a change t
 2. **Released** as a tagged GitHub release that CI validated
 3. **Installed** in the local Clean Language dev environment (via `cleen install` / `cleen frame install`)
 4. **Verified** to no longer reproduce the original error (when a minimal_repro is available)
+5. **Recorded** as resolved on the server, so users who reported it get notified
 
-Only then can users who reported the bug trust that updating will resolve their issue. `/resolve-fix` enforces this by refusing to mark `resolved` until each stage is independently verified.
+Only then can users who reported the bug trust that updating will resolve their issue. `/resolve-fix` enforces this by refusing to post resolution until each stage is independently verified.
 
 ## Integration with comita
 
@@ -253,7 +186,7 @@ The canonical flow after identifying a reported bug:
 1. /triage                            → pick the bug, identify component + root cause
 2. Fix the code                       → in the correct component only
 3. comita                             → STEP 1-6: commit, tag, push, CI, install
-4. /resolve-fix <code> <ver> "..."    → STEP 7 of comita: verify + resolve
+4. /resolve-fix <code> <ver> "..."    → STEP 7 of comita: verify + resolve on server
 ```
 
 Comita's **STEP 7: RESOLVE REPORTED BUGS** automatically invokes this skill when the commit fixes a reported bug. Do NOT call `/resolve-fix` before comita completes — Stages 3 and 4 will fail verification.
