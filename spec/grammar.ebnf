@@ -166,7 +166,17 @@ size_specifier  = ":" , DIGIT , { DIGIT } , [ "u" ] ;
 sized_type      = core_type , size_specifier ;
                 (* e.g., integer:8, integer:64u, number:32 *)
 
-list_type       = "list" , "<" , type , ">" ;
+list_behavior   = "." , ( "line" | "pile" | "unique"
+                         | "line" , "." , "pile"
+                         | "line" , "." , "unique"
+                         | "pile" , "." , "unique"
+                         | "line" , "." , "unique" , "." , "pile" ) ;
+
+(* Contextual keywords — NOT reserved; only meaningful as list_behavior suffixes
+   or range modifiers: "line", "pile", "unique", "inclusive".
+   They are valid identifiers in all other contexts. *)
+
+list_type       = "list" , "<" , type , ">" , [ list_behavior ] ;
 matrix_type     = "matrix" , "<" , type , ">" ;
 pairs_type      = "pairs" , "<" , type , "," , type , ">" ;
 
@@ -268,6 +278,9 @@ conditional_expression
                 , "then" , additive_expression
                 , "else" , additive_expression ;
 
+range_expression
+                = additive_expression , "to" , additive_expression , [ "inclusive" ] ;
+
 on_error_expression
                 = base_expression , "onError" , base_expression ;
 
@@ -284,6 +297,7 @@ primary         = number_literal
                 | list_literal
                 | pairs_literal
                 | "(" , expression , ")"
+                | input_expression
                 | constructor_call
                 | base_call
                 | namespace_method_chain
@@ -296,6 +310,7 @@ primary         = number_literal
                 | function_call
                 | static_method_call
                 | start_expression
+                | range_expression
                 | list_access
                 | property_access
                 | "error"
@@ -374,6 +389,9 @@ base_call       = "base" , "(" , [ argument_list ] , ")" ;
 
 start_expression
                 = "start" , expression ;
+
+input_expression
+                = "input" , "(" , expression , [ "," , type ] , ")" ;
 
 
 (* --- 3.7 Single-Line Expressions --- *)
