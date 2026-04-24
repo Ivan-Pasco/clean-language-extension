@@ -10,7 +10,7 @@ The IDE extension currently has three independent systems for language knowledge
 2. A `plugin-loader.ts` that reads plugin.toml for completions/hover
 3. The language server (diagnostics only currently)
 
-This creates duplication and maintenance burden — every new keyword must be added to both the extension grammar AND plugin.toml. The architecture has been formally defined in `platform-architecture/IDE_EXTENSION_ARCHITECTURE.md`: the language server is the single source of truth.
+This creates duplication and maintenance burden — every new keyword must be added to both the extension grammar AND plugin.toml. The architecture has been formally defined in `../platform-architecture/IDE_EXTENSION_ARCHITECTURE.md`: the language server is the single source of truth.
 
 ## Required Changes
 
@@ -62,5 +62,5 @@ The language server must provide `textDocument/hover` for:
 - LSP capability registration (server capabilities)
 
 ## Architecture Reference
-See `platform-architecture/IDE_EXTENSION_ARCHITECTURE.md` for the complete specification.
+See `../platform-architecture/IDE_EXTENSION_ARCHITECTURE.md` for the complete specification.
 The extension will be simplified to a thin client after this work is complete.

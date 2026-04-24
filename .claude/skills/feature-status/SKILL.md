@@ -8,7 +8,7 @@ Track completion status of language features against the spec.
 
 ## Instructions
 
-1. **Read `spec/grammar.ebnf`** and extract major feature areas:
+1. **Read `foundation/spec/grammar.ebnf`** and extract major feature areas:
    - Variables and assignments
    - Types (integer, number, string, boolean, list, matrix, pairs)
    - Expressions and operators

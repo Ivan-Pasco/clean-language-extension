@@ -113,7 +113,7 @@ fi
 # 9. Spec files
 echo "--- Specification ---"
 SPEC_MISSING=0
-for f in spec/grammar.ebnf spec/semantic-rules.md spec/type-system.md spec/stdlib-reference.md spec/plugins/frame-server.ebnf spec/plugins/frame-data.ebnf spec/plugins/frame-ui.ebnf spec/plugins/frame-auth.ebnf spec/plugins/frame-canvas.ebnf; do
+for f in foundation/spec/grammar.ebnf foundation/spec/semantic-rules.md foundation/spec/type-system.md foundation/spec/stdlib-reference.md foundation/spec/plugins/frame-server.ebnf foundation/spec/plugins/frame-data.ebnf foundation/spec/plugins/frame-ui.ebnf foundation/spec/plugins/frame-auth.ebnf foundation/spec/plugins/frame-canvas.ebnf; do
     [[ ! -f "$PROJECT_ROOT/$f" ]] && SPEC_MISSING=$((SPEC_MISSING + 1))
 done
 if [[ "$SPEC_MISSING" == "0" ]]; then

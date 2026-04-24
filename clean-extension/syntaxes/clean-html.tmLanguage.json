@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
   "name": "Clean HTML",
   "scopeName": "text.html.clean",
-  "comment": "Minimal HTML grammar with Clean interpolation — directive and event highlighting comes from the language server. See platform-architecture/IDE_EXTENSION_ARCHITECTURE.md",
+  "comment": "Minimal HTML grammar with Clean interpolation — directive and event highlighting comes from the language server. See foundation/platform-architecture/IDE_EXTENSION_ARCHITECTURE.md",
   "patterns": [
     { "include": "#clean-comments" },
     { "include": "#raw-interpolation" },

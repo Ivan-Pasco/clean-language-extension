@@ -160,7 +160,7 @@ Ask: **Does this function need to access anything outside WASM memory?**
 
 ### Shared code between components
 
-Some types and formats are used by multiple components (e.g., the structure of `plugin.toml`, the error report schema, the function-registry TOML format). These shared definitions live in the specification documents (`platform-architecture/`, `spec/`), not in any component's source code. Each component implements its own parser for the shared format based on the specification. Components do not share source code.
+Some types and formats are used by multiple components (e.g., the structure of `plugin.toml`, the error report schema, the function-registry TOML format). These shared definitions live in the specification documents (`../platform-architecture/`, `../spec/`), not in any component's source code. Each component implements its own parser for the shared format based on the specification. Components do not share source code.
 
 ### Rules
 
@@ -168,7 +168,7 @@ Some types and formats are used by multiple components (e.g., the structure of `
 - When work in one component reveals a bug in another, call `report_error` via the MCP server. The error is tracked in the website's error dashboard. The developer reviews and directs fixes.
 - Each component has its own CLAUDE.md, CI/CD, and test suite.
 - Reading other components for interface understanding is allowed. Writing is not.
-- Before implementing any function, check `platform-architecture/EXECUTION_LAYERS.md` to confirm the correct layer. If the function is not listed, determine its layer using the decision rule, add it to the execution layers document, then implement.
+- Before implementing any function, check `../platform-architecture/EXECUTION_LAYERS.md` to confirm the correct layer. If the function is not listed, determine its layer using the decision rule, add it to the execution layers document, then implement.
 
 Full boundary definitions: `management/ARCHITECTURE_BOUNDARIES.md`
 
@@ -198,16 +198,16 @@ The project used a 4,244-line Markdown document as its language specification. I
 
 | File | Purpose | Format |
 |------|---------|--------|
-| `spec/grammar.ebnf` | Core language syntax — every valid construct without plugins | EBNF notation |
-| `spec/plugins/frame-server.ebnf` | Syntax extensions added by frame.server plugin | EBNF notation |
-| `spec/plugins/frame-data.ebnf` | Syntax extensions added by frame.data plugin | EBNF notation |
-| `spec/plugins/frame-ui.ebnf` | Syntax extensions added by frame.ui plugin | EBNF notation |
-| `spec/plugins/frame-auth.ebnf` | Syntax extensions added by frame.auth plugin | EBNF notation |
-| `spec/plugins/frame-canvas.ebnf` | Syntax extensions added by frame.canvas plugin | EBNF notation |
-| `spec/semantic-rules.md` | What the compiler checks after parsing — type errors, scope violations, each with a numbered code (SEM001, SEM002...) | Numbered rule list |
-| `spec/type-system.md` | Which types are compatible, how precision modifiers work, what conversions are allowed | Structured tables |
-| `spec/stdlib-reference.md` | Every built-in function with its exact signature, parameter types, and return type | Signature tables |
-| `spec/examples/` | One `.cln` file per language concept, each compilable and testable | Executable code |
+| `../spec/grammar.ebnf` | Core language syntax — every valid construct without plugins | EBNF notation |
+| `../spec/plugins/frame-server.ebnf` | Syntax extensions added by frame.server plugin | EBNF notation |
+| `../spec/plugins/frame-data.ebnf` | Syntax extensions added by frame.data plugin | EBNF notation |
+| `../spec/plugins/frame-ui.ebnf` | Syntax extensions added by frame.ui plugin | EBNF notation |
+| `../spec/plugins/frame-auth.ebnf` | Syntax extensions added by frame.auth plugin | EBNF notation |
+| `../spec/plugins/frame-canvas.ebnf` | Syntax extensions added by frame.canvas plugin | EBNF notation |
+| `../spec/semantic-rules.md` | What the compiler checks after parsing — type errors, scope violations, each with a numbered code (SEM001, SEM002...) | Numbered rule list |
+| `../spec/type-system.md` | Which types are compatible, how precision modifiers work, what conversions are allowed | Structured tables |
+| `../spec/stdlib-reference.md` | Every built-in function with its exact signature, parameter types, and return type | Signature tables |
+| `../spec/examples/` | One `.cln` file per language concept, each compilable and testable | Executable code |
 
 ### Plugins are language extensions — they get EBNF too
 
@@ -245,7 +245,7 @@ This separates three concerns into three homes:
 
 | Concern | Home | Format |
 |---------|------|--------|
-| Plugin syntax (what's valid to write) | `spec/plugins/<name>.ebnf` | EBNF |
+| Plugin syntax (what's valid to write) | `../spec/plugins/<name>.ebnf` | EBNF |
 | Plugin semantics (what it means, how it behaves) | `clean-framework/documents/specification/` | Prose + tables |
 | Plugin bridge contract (what functions the host provides) | `plugin.toml` + `function-registry.toml` | TOML |
 
@@ -254,7 +254,7 @@ No duplication. The EBNF says what you can write. The framework spec says what i
 ### Rules
 
 - `grammar.ebnf` is the single source of truth for core language syntax. The compiler's `grammar.pest` is an implementation of this spec. If they diverge, `grammar.pest` is wrong.
-- Each plugin EBNF in `spec/plugins/` is the single source of truth for that plugin's syntax. The plugin's `expand()` function in `src/main.cln` is an implementation. If they diverge, the implementation is wrong.
+- Each plugin EBNF in `../spec/plugins/` is the single source of truth for that plugin's syntax. The plugin's `expand()` function in `src/main.cln` is an implementation. If they diverge, the implementation is wrong.
 - Every syntax question must be answerable by reading `grammar.ebnf` (plus the relevant plugin EBNF, if the question involves a plugin block) without reading prose.
 - Examples exist for illustration. They do not define the language. An example that contradicts an EBNF is a wrong example.
 - When adding a feature to the core language: update `grammar.ebnf` first, then implement in the compiler. Never implement first and document later.
@@ -267,16 +267,16 @@ The current spec is the Markdown file at `clean-language-compiler/documentation/
 
 **Core language:**
 
-1. Extract all syntax rules from the Markdown spec and from `grammar.pest` into `spec/grammar.ebnf`
-2. Extract all semantic rules into `spec/semantic-rules.md` with numbered codes
-3. Extract all type compatibility rules into `spec/type-system.md`
-4. Extract all stdlib function signatures into `spec/stdlib-reference.md`
+1. Extract all syntax rules from the Markdown spec and from `grammar.pest` into `../spec/grammar.ebnf`
+2. Extract all semantic rules into `../spec/semantic-rules.md` with numbered codes
+3. Extract all type compatibility rules into `../spec/type-system.md`
+4. Extract all stdlib function signatures into `../spec/stdlib-reference.md`
 5. Move current Markdown spec to `documentation/legacy/`
-6. Update every CLAUDE.md to reference `spec/`
+6. Update every CLAUDE.md to reference `../spec/`
 
 **Plugin grammars:**
 
-7. For each plugin (`frame.server`, `frame.data`, `frame.ui`, `frame.auth`, `frame.canvas`): extract syntax rules from the framework spec (`03_frame_server.md`, etc.), from `plugin.toml` keyword/block definitions, and from the plugin's `src/main.cln` expand function into `spec/plugins/<name>.ebnf`
+7. For each plugin (`frame.server`, `frame.data`, `frame.ui`, `frame.auth`, `frame.canvas`): extract syntax rules from the framework spec (`03_frame_server.md`, etc.), from `plugin.toml` keyword/block definitions, and from the plugin's `src/main.cln` expand function into `../spec/plugins/<name>.ebnf`
 8. Cross-reference each plugin EBNF against its `plugin.toml` — every keyword, block, and type in the TOML must correspond to an EBNF production
 9. The framework specs (`clean-framework/documents/specification/`) remain as the semantic/behavioral reference — they describe what the constructs mean, not what's syntactically valid. Remove any syntax definitions from them that are now covered by the EBNF.
 
@@ -294,19 +294,19 @@ Every type of information has exactly one authoritative location. All other refe
 
 | Information | Authoritative location |
 |-------------|----------------------|
-| Core language syntax | `spec/grammar.ebnf` |
-| Plugin syntax extensions | `spec/plugins/<name>.ebnf` (one per plugin) |
+| Core language syntax | `../spec/grammar.ebnf` |
+| Plugin syntax extensions | `../spec/plugins/<name>.ebnf` (one per plugin) |
 | Plugin semantics & behavior | `clean-framework/documents/specification/` |
-| Plugin bridge contracts | `plugin.toml` + `platform-architecture/function-registry.toml` |
-| Semantic rules | `spec/semantic-rules.md` |
-| Type system | `spec/type-system.md` |
-| Standard library | `spec/stdlib-reference.md` |
+| Plugin bridge contracts | `plugin.toml` + `../platform-architecture/function-registry.toml` |
+| Semantic rules | `../spec/semantic-rules.md` |
+| Type system | `../spec/type-system.md` |
+| Standard library | `../spec/stdlib-reference.md` |
 | Component boundaries | `management/ARCHITECTURE_BOUNDARIES.md` |
-| Execution layers | `platform-architecture/EXECUTION_LAYERS.md` |
-| Host function signatures | `platform-architecture/function-registry.toml` |
-| Memory layout | `platform-architecture/MEMORY_MODEL.md` |
+| Execution layers | `../platform-architecture/EXECUTION_LAYERS.md` |
+| Host function signatures | `../platform-architecture/function-registry.toml` |
+| Memory layout | `../platform-architecture/MEMORY_MODEL.md` |
 | Project management | This document |
-| Error reporting & diagnostic bundles | `platform-architecture/ERROR_REPORTING_SPECIFICATION.md` |
+| Error reporting & diagnostic bundles | `../platform-architecture/ERROR_REPORTING_SPECIFICATION.md` |
 | Task tracking | `TASKS.md` (per component) |
 
 ### Why this principle exists
@@ -375,7 +375,7 @@ Each of these cost more to debug than doing it right would have cost.
 
 ### Enforcement
 
-- Every compiler diagnostic has a mandatory error code (SYN001, SEM002, GEN001, etc.) defined in `spec/semantic-rules.md`. A diagnostic without a code is incomplete.
+- Every compiler diagnostic has a mandatory error code (SYN001, SEM002, GEN001, etc.) defined in `../spec/semantic-rules.md`. A diagnostic without a code is incomplete.
 - CI check: `grep -r "todo!()" src/` must return zero matches in production code.
 - Test runner exit codes reflect failure: non-zero when any test fails.
 - CI fails on any test failure, any compiler warning in critical paths, and any spec compliance violation.
@@ -639,8 +639,8 @@ The project experienced "propagation bugs" where a change was made in several co
 
 ### For language syntax changes (new keyword, new construct)
 
-1. **Update `spec/grammar.ebnf`** — Define the syntax formally
-2. **Update `spec/semantic-rules.md`** — Define type/scope rules and error conditions
+1. **Update `../spec/grammar.ebnf`** — Define the syntax formally
+2. **Update `../spec/semantic-rules.md`** — Define type/scope rules and error conditions
 3. **Implement in compiler** — `grammar.pest` → parser → semantic → codegen
 4. **Verify:** `cargo test` passes in compiler
 5. **If host functions needed:** Update `function-registry.toml`
@@ -780,7 +780,7 @@ The project's error reports (v1) are designed for human triage: error code, mess
 - Bundles are always generated locally. Sending to backend requires consent.
 - Resolutions include the commit hash. The backend links error patterns to fixes, building a knowledge base: the more bugs are fixed, the faster future similar bugs are diagnosed.
 
-Full schema: `platform-architecture/ERROR_REPORTING_SPECIFICATION.md`, Section 16.
+Full schema: `../platform-architecture/ERROR_REPORTING_SPECIFICATION.md`, Section 16.
 
 ---
 
@@ -937,7 +937,7 @@ Each AI work session starts fresh. If one session discovers that "codegen for st
 - Anything derivable from reading the code (architecture, function signatures)
 - Test results (generated by running tests, not written)
 - Task status (belongs in TASKS.md)
-- Spec definitions (belong in `spec/`)
+- Spec definitions (belong in `../spec/`)
 - Debugging steps for specific bugs (the fix is in the commit; the knowledge is why the area is fragile)
 
 ### Rules
@@ -1306,8 +1306,8 @@ Both modes compound over time. A feature added to the compiler "for now" without
 
 - Every production rule in `grammar.ebnf` must have a corresponding implementation that passes compilation and (where runtime is available) execution.
 - Every keyword, block, and type in `plugin.toml` files must have a corresponding EBNF production in the plugin's spec file.
-- Every function in `spec/stdlib-reference.md` must be callable, compilable, and functional.
-- Every semantic rule in `spec/semantic-rules.md` must be enforced by the type checker.
+- Every function in `../spec/stdlib-reference.md` must be callable, compilable, and functional.
+- Every semantic rule in `../spec/semantic-rules.md` must be enforced by the type checker.
 - If a feature is planned but not yet implemented, it does NOT belong in the spec. It belongs in TASKS.md as a planned feature.
 - The `/coverage` skill measures this parity. Run it periodically. Any gap is a Tier 1 violation.
 
@@ -1338,7 +1338,7 @@ For each compiler feature:
 
 ### What this means
 
-The specification (`spec/` directory) is a controlled document. AI instances may NOT modify it unilaterally. Changes to the spec require the developer's explicit approval and directive.
+The specification (`../spec/` directory) is a controlled document. AI instances may NOT modify it unilaterally. Changes to the spec require the developer's explicit approval and directive.
 
 ### Why this principle exists
 
@@ -1367,11 +1367,11 @@ This principle ensures the developer remains the language designer. AI instances
 
 ### Rules
 
-- **NEVER modify `spec/grammar.ebnf` without developer approval.** This is the language's constitution.
-- **NEVER modify `spec/semantic-rules.md` without developer approval.** These are the type system's laws.
-- **NEVER modify `spec/type-system.md` without developer approval.** Type compatibility changes can break existing programs.
-- **NEVER modify `spec/stdlib-reference.md` without developer approval.** Changing a function signature is a breaking change.
-- **NEVER modify `spec/plugins/*.ebnf` without developer approval.** Plugin syntax is part of the framework's API.
+- **NEVER modify `../spec/grammar.ebnf` without developer approval.** This is the language's constitution.
+- **NEVER modify `../spec/semantic-rules.md` without developer approval.** These are the type system's laws.
+- **NEVER modify `../spec/type-system.md` without developer approval.** Type compatibility changes can break existing programs.
+- **NEVER modify `../spec/stdlib-reference.md` without developer approval.** Changing a function signature is a breaking change.
+- **NEVER modify `../spec/plugins/*.ebnf` without developer approval.** Plugin syntax is part of the framework's API.
 - **NEVER add syntax to the compiler that isn't in the spec.** Propose a spec change first, get approval, then implement.
 - **NEVER remove spec entries to hide compiler bugs.** Fix the bug. If the feature is genuinely wrong, ask the developer.
 

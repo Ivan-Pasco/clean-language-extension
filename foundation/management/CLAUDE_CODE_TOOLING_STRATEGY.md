@@ -117,10 +117,10 @@ Logic:
 - Map file path to component by checking prefixes: `clean-language-compiler/`, `clean-server/`, `clean-extension/`, `clean-framework/`, `clean-manager/`, `clean-node-server/`, `clean-ui/`, `clean-canvas/`, `clean-llm/`, `Clean MCP/`, `clean-cpanel-plugin/`
 - Map current working directory (`$PWD`) to component using the same prefixes
 - If file component != working directory component: exit 2 with stderr message: "BLOCKED: You are working in [component A] but trying to edit a file in [component B]. Per Principle 1, create a cross-component prompt in management/cross-component-prompts/ instead."
-- If same component or file is in shared locations (`management/`, `platform-architecture/`, `spec/`): exit 0
+- If same component or file is in shared locations (`management/`, `../platform-architecture/`, `../spec/`): exit 0
 
 **Exceptions:**
-- Files in `management/`, `platform-architecture/`, `spec/`, and project root are shared — edits allowed from any component
+- Files in `management/`, `../platform-architecture/`, `../spec/`, and project root are shared — edits allowed from any component
 - CLAUDE.md files in any component can be read but not written from another component (the Edit matcher catches writes)
 - If working from project root (not inside any specific component), all edits are allowed — the root is the coordination level
 
@@ -544,13 +544,13 @@ Rules load automatically based on which files the AI is working in. They replace
 ## Component Isolation
 - You may only edit files in the component matching your current working directory
 - Cross-component issues go to management/cross-component-prompts/
-- Shared specs (spec/, platform-architecture/, management/) can be edited from any context
+- Shared specs (spec/, ../platform-architecture/, management/) can be edited from any context
 
 ## Execution Layers
 - Layer 0 (Compiler): parse, analyze, generate WASM imports — never implement I/O
 - Layer 2 (Host Bridge): portable I/O — defined in function-registry.toml
 - Layer 3 (Server Extensions): HTTP-only functions
-- If unsure which layer: check platform-architecture/EXECUTION_LAYERS.md
+- If unsure which layer: check ../platform-architecture/EXECUTION_LAYERS.md
 
 ## Specification Authority
 - grammar.ebnf (or grammar.pest until migration) defines core language syntax
@@ -800,7 +800,7 @@ allowed-tools: Bash Read Glob Grep
 ---
 
 Check every cross-component interface:
-1. Read platform-architecture/function-registry.toml — list all functions
+1. Read ../platform-architecture/function-registry.toml — list all functions
 2. In clean-server: run cargo test for spec_compliance — does it pass?
 3. In clean-node-server: check if equivalent tests exist
 4. In clean-framework/plugins: for each plugin.toml, verify every bridge function exists in registry

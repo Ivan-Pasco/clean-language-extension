@@ -1,7 +1,7 @@
 Component: clean-language-compiler
 Issue Type: enhancement
 Priority: medium
-Description: The compiler's semantic analysis does not register `_res_redirect` as a known function. This means Clean Language source code that calls `_res_redirect("/login", 302)` fails validation with "Function '_res_redirect' not found". The server already implements this function in bridge.rs (Layer 3), and it's defined in `platform-architecture/function-registry.toml`.
+Description: The compiler's semantic analysis does not register `_res_redirect` as a known function. This means Clean Language source code that calls `_res_redirect("/login", 302)` fails validation with "Function '_res_redirect' not found". The server already implements this function in bridge.rs (Layer 3), and it's defined in `../platform-architecture/function-registry.toml`.
 
 Context: Discovered while adding SSR companion file integration tests in clean-server. The guard pattern requires handlers to call `_res_redirect(url, status_code)` to trigger a redirect before returning. The server tests had to use hand-crafted WAT modules instead of Clean Language source to test this functionality.
 

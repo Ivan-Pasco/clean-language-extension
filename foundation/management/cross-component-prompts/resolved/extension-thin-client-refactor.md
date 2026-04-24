@@ -5,7 +5,7 @@ Description: Refactor extension to thin LSP client — remove all hardcoded lang
 
 ## Context
 
-The architecture has been formally defined in `platform-architecture/IDE_EXTENSION_ARCHITECTURE.md`: the language server (in the compiler) is the single source of truth for all language intelligence. The extension must be refactored to a thin client.
+The architecture has been formally defined in `../platform-architecture/IDE_EXTENSION_ARCHITECTURE.md`: the language server (in the compiler) is the single source of truth for all language intelligence. The extension must be refactored to a thin client.
 
 **PREREQUISITE:** This work should be done AFTER the compiler's language server implements semantic tokens, completions, and hover (see `cross-component-prompts/compiler-language-server-semantic-tokens.md`).
 
@@ -91,5 +91,5 @@ Snippets can stay in the extension — they are user-facing templates, not langu
 - `package.json` — update as needed
 
 ## Architecture Reference
-See `platform-architecture/IDE_EXTENSION_ARCHITECTURE.md` for the complete specification.
+See `../platform-architecture/IDE_EXTENSION_ARCHITECTURE.md` for the complete specification.
 See `system-documents/ARCHITECTURE_BOUNDARIES.md` for boundary definitions.

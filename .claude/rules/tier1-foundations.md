@@ -9,7 +9,7 @@ alwaysApply: true
 ## Component Isolation (Principle 1)
 - Each component lives in its own folder. Do NOT edit files in other components.
 - If you discover a bug in another component, call `report_error` via the MCP server.
-- Exception: `spec/`, `management/`, `platform-architecture/` are shared.
+- Exception: `foundation/spec/`, `foundation/management/`, `foundation/platform-architecture/` are shared.
 
 ## Error Report Lifecycle (Principle 1.1)
 Every reported error has a mandatory 5-stage lifecycle. A fix is NOT "finished" until all stages are verified:
@@ -30,12 +30,12 @@ Rules:
 5. A fix that is not taken through stage 5 leaves stale "reported" entries and users are never notified.
 
 ## Execution Layers (Principle 1)
-- Before implementing any function, check `platform-architecture/EXECUTION_LAYERS.md`.
+- Before implementing any function, check `foundation/platform-architecture/EXECUTION_LAYERS.md`.
 - Layer 0 (Compiler): Parse, analyze, generate WASM imports — NOT implementations.
 - Layer 2+ (Host Bridge): Anything needing I/O belongs in the server, not the compiler.
 
 ## Specification Authority (Principle 2)
-- `spec/grammar.ebnf` is the authoritative syntax definition.
+- `foundation/spec/grammar.ebnf` is the authoritative syntax definition.
 - When resolving ambiguity, EBNF takes precedence over prose documentation.
 - Update EBNF before implementing new syntax. Never implement syntax not in the EBNF.
 

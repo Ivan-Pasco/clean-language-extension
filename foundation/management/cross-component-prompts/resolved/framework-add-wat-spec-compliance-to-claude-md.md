@@ -14,7 +14,7 @@ Description: |
   2. ALL string parameters use raw `(ptr: i32, len: i32)` pairs (NOT length-prefixed single pointers)
   3. Integer values use `i64` for: `print_integer`, `int_to_string`, `string_to_int`
   4. When the framework generates or references host function calls, signatures must match the WAT spec
-  5. The authoritative reference is `platform-architecture/HOST_BRIDGE.md`
+  5. The authoritative reference is `../platform-architecture/HOST_BRIDGE.md`
 
 Context: |
   During a comprehensive spec compliance audit of clean-server, we found ~24 functions had
@@ -37,7 +37,7 @@ Suggested Fix: |
   1. ALL string input parameters use raw `(ptr: i32, len: i32)` pairs
   2. Return strings use length-prefixed format: `[4-byte LE length][UTF-8 data]`
   3. Integer values use `i64` (not `i32`) for: `print_integer`, `int_to_string`, `string_to_int`
-  4. Reference: `clean-server/host-bridge/tests/spec_compliance.wat` and `platform-architecture/HOST_BRIDGE.md`
+  4. Reference: `clean-server/host-bridge/tests/spec_compliance.wat` and `../platform-architecture/HOST_BRIDGE.md`
 
 Files Affected:
   - CLAUDE.md (add WAT spec compliance section)

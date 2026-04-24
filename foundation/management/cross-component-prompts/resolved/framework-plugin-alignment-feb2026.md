@@ -80,8 +80,8 @@ HTTP client functions available:
 
 ## Authoritative Reference
 
-- Host Bridge docs: `platform-architecture/HOST_BRIDGE.md`
-- Server Extensions docs: `platform-architecture/SERVER_EXTENSIONS.md`
+- Host Bridge docs: `../platform-architecture/HOST_BRIDGE.md`
+- Server Extensions docs: `../platform-architecture/SERVER_EXTENSIONS.md`
 - WAT spec: `clean-server/host-bridge/tests/spec_compliance.wat`
 
 ## Files Affected

@@ -10,7 +10,7 @@ alwaysApply: false
 If a test fails, the fix goes in the source code, NOT the test.
 
 ## Exception: Spec Contradiction
-If a test uses syntax that contradicts `spec/grammar.ebnf`:
+If a test uses syntax that contradicts `foundation/spec/grammar.ebnf`:
 1. Verify the EBNF is correct (it's the authority)
 2. Fix the test to match the EBNF
 3. Document the change with a comment: `// Fixed: was using X, spec requires Y`

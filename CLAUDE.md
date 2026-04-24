@@ -16,15 +16,15 @@ This is a Rust-based compiler for Clean Language, a type-safe programming langua
 
 Language characteristics are described in the [Language Specification](./Language-Specification.md). if you find something that is not described in the specification, propose a change to the specification before implementing it. When something is added you need to update the specification.
 
-## Formal Specifications (`spec/`)
+## Formal Specifications (`foundation/spec/`)
 
-The `spec/` directory contains the formal, machine-readable specifications that are the single source of truth for language correctness (Principles 2 and 3):
+The `foundation/spec/` directory contains the formal, machine-readable specifications that are the single source of truth for language correctness (Principles 2 and 3):
 
-- **[`spec/grammar.ebnf`](./spec/grammar.ebnf)** — Core language syntax in EBNF (authoritative)
-- **[`spec/semantic-rules.md`](./spec/semantic-rules.md)** — Numbered semantic rules (SYN, SEM, SCOPE, FUNC, CLASS, etc.)
-- **[`spec/type-system.md`](./spec/type-system.md)** — Type hierarchy, compatibility matrix, conversions
-- **[`spec/stdlib-reference.md`](./spec/stdlib-reference.md)** — 287 built-in functions across 14 categories
-- **[`spec/plugins/`](./spec/plugins/)** — Plugin grammar extensions:
+- **[`foundation/spec/grammar.ebnf`](./spec/grammar.ebnf)** — Core language syntax in EBNF (authoritative)
+- **[`foundation/spec/semantic-rules.md`](./spec/semantic-rules.md)** — Numbered semantic rules (SYN, SEM, SCOPE, FUNC, CLASS, etc.)
+- **[`foundation/spec/type-system.md`](./spec/type-system.md)** — Type hierarchy, compatibility matrix, conversions
+- **[`foundation/spec/stdlib-reference.md`](./spec/stdlib-reference.md)** — 287 built-in functions across 14 categories
+- **[`foundation/spec/plugins/`](./spec/plugins/)** — Plugin grammar extensions:
   - `frame-server.ebnf` — endpoints, routing, request/response
   - `frame-data.ebnf` — ORM models, queries, migrations
   - `frame-ui.ebnf` — components, HTML directives, styles
@@ -254,7 +254,7 @@ The "comita" workflow is defined in the global CLAUDE.md. Do not duplicate it he
 
 ## Architecture Boundaries
 
-**CRITICAL: Read `management/ARCHITECTURE_BOUNDARIES.md` before implementing ANY new functionality in ANY component.**
+**CRITICAL: Read `foundation/management/ARCHITECTURE_BOUNDARIES.md` before implementing ANY new functionality in ANY component.**
 
 This document defines what each component IS and IS NOT responsible for. It includes a boundary violation detection checklist and delegation patterns. Every component's CLAUDE.md must reference it.
 
@@ -304,19 +304,19 @@ When you discover a bug in another component, do NOT fix it directly. Instead:
 
 ## Documentation Sync Protocol
 
-Facts about the language live in `spec/` (at the project root). Facts about the platform live in `platform-architecture/`. Do not duplicate them here — link to them instead.
+Facts about the language live in `foundation/spec/` (at the project root). Facts about the platform live in `foundation/platform-architecture/`. Do not duplicate them here — link to them instead.
 
 **When you make a change in this component, update the corresponding spec file in the same commit:**
 
 | Change type | Update required |
 |-------------|-----------------|
-| New language syntax | `spec/grammar.ebnf` |
-| New semantic rule or error code | `spec/semantic-rules.md` + `spec/error-codes.md` |
-| New or changed type rule | `spec/type-system.md` |
-| New or changed built-in function | `spec/stdlib-reference.md` |
-| New or changed AST node | `spec/ast.md` |
-| New or changed plugin contract | `spec/plugins/plugin-contract.md` |
-| New or changed host bridge function | `platform-architecture/HOST_BRIDGE.md` |
-| New or changed execution layer | `platform-architecture/EXECUTION_LAYERS.md` |
+| New language syntax | `foundation/spec/grammar.ebnf` |
+| New semantic rule or error code | `foundation/spec/semantic-rules.md` + `foundation/spec/error-codes.md` |
+| New or changed type rule | `foundation/spec/type-system.md` |
+| New or changed built-in function | `foundation/spec/stdlib-reference.md` |
+| New or changed AST node | `foundation/spec/ast.md` |
+| New or changed plugin contract | `foundation/spec/plugins/plugin-contract.md` |
+| New or changed host bridge function | `foundation/platform-architecture/HOST_BRIDGE.md` |
+| New or changed execution layer | `foundation/platform-architecture/EXECUTION_LAYERS.md` |
 
 The spec files are the single source of truth. Component documentation explains implementation — it does not redefine language rules.

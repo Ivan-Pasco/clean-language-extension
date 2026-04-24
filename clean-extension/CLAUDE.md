@@ -20,7 +20,7 @@ Provide comprehensive IDE support for Clean Language including:
 
 ## 🏗️ Architecture Context
 
-**CRITICAL: Read [IDE Extension Architecture](../platform-architecture/IDE_EXTENSION_ARCHITECTURE.md) before making ANY changes.**
+**CRITICAL: Read [IDE Extension Architecture](../foundation/platform-architecture/IDE_EXTENSION_ARCHITECTURE.md) before making ANY changes.**
 
 ### Architectural Principle: Language Server as Single Source of Truth
 
@@ -324,7 +324,7 @@ Instead:
 
 1. **Document the issue** by creating a prompt/task description
 2. **Save the prompt** in a file that can be executed by the AI instance working in the correct folder
-3. **Location for cross-component prompts**: Save prompts in `../management/cross-component-prompts/` at the project root
+3. **Location for cross-component prompts**: Save prompts in `../foundation/management/cross-component-prompts/` at the project root
 
 ### Prompt Format for Cross-Component Issues
 
@@ -362,7 +362,7 @@ Files Affected: [List of files in the target component that need changes]
 
 ## Documentation Sync Protocol
 
-Facts about the language live in `spec/` (at the project root). Facts about the platform live in `platform-architecture/`. Do not duplicate them here — link to them instead.
+Facts about the language live in `foundation/spec/` (at the project root). Facts about the platform live in `foundation/platform-architecture/`. Do not duplicate them here — link to them instead.
 
 The extension is a thin LSP client. It does not define language rules, host bridge functions, or execution layers. When a change in this component exposes a gap in how the language server communicates with the IDE, report it via `report_error` — the language server lives in the compiler.
 
@@ -370,7 +370,7 @@ The extension is a thin LSP client. It does not define language rules, host brid
 
 | Change type | Update required |
 |-------------|-----------------|
-| New or changed execution layer | `platform-architecture/EXECUTION_LAYERS.md` |
-| New or changed IDE architecture contract | `platform-architecture/IDE_EXTENSION_ARCHITECTURE.md` |
+| New or changed execution layer | `foundation/platform-architecture/EXECUTION_LAYERS.md` |
+| New or changed IDE architecture contract | `foundation/platform-architecture/IDE_EXTENSION_ARCHITECTURE.md` |
 
 The spec files are the single source of truth. Component documentation explains implementation — it does not redefine language rules.

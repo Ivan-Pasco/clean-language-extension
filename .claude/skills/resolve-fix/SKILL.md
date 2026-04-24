@@ -16,7 +16,7 @@ Every reported error moves through these stages. The skill enforces all of them 
 
 If any stage fails verification, the skill stops and reports which stage needs attention. It does NOT post resolution on partial progress.
 
-See `management/ERROR_REPORTING_WORKFLOW.md` for why local state is never used here.
+See `foundation/management/ERROR_REPORTING_WORKFLOW.md` for why local state is never used here.
 
 ## Usage
 

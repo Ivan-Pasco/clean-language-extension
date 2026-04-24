@@ -27,7 +27,7 @@ The compiler calls plugins via WASM — it does NOT contain plugin-specific logi
 - **NEVER** "workaround" broken plugin output by duplicating the plugin's logic
 - If plugin WASM produces wrong output → the bug is in the **codegen** that compiled the plugin
 - Fix the codegen bug → recompile the plugin → the plugin works correctly
-- See `management/ARCHITECTURE_BOUNDARIES.md` "The Workaround Trap" section
+- See `foundation/management/ARCHITECTURE_BOUNDARIES.md` "The Workaround Trap" section
 
 ## Build Verification
 After any change to `src/`:
@@ -37,7 +37,7 @@ cargo test --lib
 ```
 
 ## Spec References
-- Grammar: `spec/grammar.ebnf`
-- Semantic rules: `spec/semantic-rules.md`
-- Type system: `spec/type-system.md`
-- Built-ins: `spec/stdlib-reference.md`
+- Grammar: `foundation/spec/grammar.ebnf`
+- Semantic rules: `foundation/spec/semantic-rules.md`
+- Type system: `foundation/spec/type-system.md`
+- Built-ins: `foundation/spec/stdlib-reference.md`

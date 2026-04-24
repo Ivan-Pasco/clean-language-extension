@@ -14,7 +14,7 @@
 - Feature matrix: `tests/cln/ci/feature_matrix.md`
 
 ### Cross-Component Prompts:
-- 124 prompts resolved and archived in `management/cross-component-prompts/resolved/`
+- 124 prompts resolved and archived in `foundation/management/cross-component-prompts/resolved/`
 
 ---
 

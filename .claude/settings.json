@@ -80,14 +80,48 @@
       "Bash(ssh root@165.227.62.95 \"mysql -u cleanuser -pCl3anL4ng2025Pr0d clean_website -e \\\\\"SELECT status, COUNT\\(*\\) as count FROM error_fingerprints GROUP BY status;\\\\\" 2>/dev/null\")",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://errors.cleanlanguage.dev/errors\")",
       "Bash(python3 -c \"import sys,json; d=json.loads\\(sys.stdin.read\\(\\)\\); print\\(f'Open codegen bugs: {d[\\\\\"total\\\\\"]}'\\)\")",
-      "Bash(python3 -c \"import sys,json; d=json.loads\\(sys.stdin.read\\(\\)\\); print\\(f'Open runtime bugs: {d[\\\\\"total\\\\\"]}'\\)\")"
+      "Bash(python3 -c \"import sys,json; d=json.loads\\(sys.stdin.read\\(\\)\\); print\\(f'Open runtime bugs: {d[\\\\\"total\\\\\"]}'\\)\")",
+      "Bash(curl -s \"https://errors.cleanlanguage.dev/errors\")",
+      "Bash(ssh root@165.227.62.95 'mysql -u cleanuser -pCl3anL4ng2025Pr0d clean_website -e \":*)",
+      "Read(//Users/earcardy/Documents/**)",
+      "Bash(CLEAN_DEBUG_PLUGIN=1 cln compile --plugins -o /tmp/test_html_attrs.wasm /tmp/test_html_attrs.cln)",
+      "Bash(\"/Users/earcandy/Documents/Dev/Clean Language/clean-server/target/release/clean-server\" /tmp/test_substr_concat.wasm)",
+      "Bash(timeout 3 \"/Users/earcandy/Documents/Dev/Clean Language/clean-server/target/release/clean-server\" --run /tmp/test_substr_concat.wasm)",
+      "Bash(cp \"/Users/earcandy/.cleen/plugins/frame.ui/2.6.1/plugin.wasm\" \"/Users/earcandy/.cleen/plugins/frame.ui/2.6.1/plugin.wasm.bak\")",
+      "Bash(cp /tmp/frame_ui_test.wasm \"/Users/earcandy/.cleen/plugins/frame.ui/2.6.1/plugin.wasm\")",
+      "Bash(cp \"/Users/earcandy/.cleen/plugins/frame.ui/2.6.1/plugin.wasm\" \"/Users/earcandy/.cleen/plugins/frame.ui/2.6.1/plugin.wasm.old\")",
+      "Bash(cp /tmp/plugin_rebuild_stripped.wasm \"/Users/earcandy/.cleen/plugins/frame.ui/2.6.1/plugin.wasm\")",
+      "Read(//\\\\\\(func \\\\\\(;302;\\\\\\)/{found=1} found{print; if\\(/^\\\\s*\\\\\\)$/**)",
+      "Bash(awk 'NR==11')",
+      "Read(//\\\\\\(func \\\\\\(;302;\\\\\\)/{found=1} found && /^\\\\s*\\\\\\)$/**)",
+      "Read(//Users/earcandy/Documents/Dev/Clean Language/clean-language-compiler/**)",
+      "Read(//\\\\\\(func \\\\\\(;302;\\\\\\)/{found=1} found{print} found && /^  \\\\\\)$/**)",
+      "Bash(python3 ../../scripts/strip-unused-wasm-imports.py /tmp/debug_strip.wat /tmp/debug_stripped.wat)",
+      "Read(//\\\\\\(func \\\\\\(;321;\\\\\\)/{found=1} found{print} found && /^  \\\\\\)$/**)",
+      "Read(//\\\\\\(func \\\\\\(;251;\\\\\\)/{found=1} found{print} found && /^  \\\\\\)$/**)",
+      "Read(//\\\\\\(func \\\\\\(;324;\\\\\\)/{found=1} found{print} found && /^  \\\\\\)$/**)",
+      "Read(//\\\\\\(func \\\\\\(;359;\\\\\\)/{found=1} found{print} found && /^  \\\\\\)$/**)",
+      "Bash(bash scripts/build.sh)",
+      "Bash(cleen --help)",
+      "Bash(cleen help:*)",
+      "Bash(cleen frame:*)",
+      "Bash(cleen use:*)",
+      "Read(//Users/earcandy/Documents/Dev/Clean Language/**)",
+      "Bash(export ERROR_API_KEY=$\\(cat ~/.cleen/error-api-key\\))",
+      "Bash(curl -s 'https://errors.cleanlanguage.dev/api/v1/bugs?component=codegen&status=open' -H 'Authorization: Bearer __TRACKED_VAR__')",
+      "Bash(curl -sv 'https://errors.cleanlanguage.dev/api/v1/bugs?component=codegen&status=open' -H 'Authorization: Bearer __TRACKED_VAR__')",
+      "Bash(curl -s 'https://errors.cleanlanguage.dev/api/v1/reports/status?id=__TRACKED_VAR__' -H 'Authorization: Bearer __TRACKED_VAR__')",
+      "Bash(curl -s \"https://errors.cleanlanguage.dev/api/v1/bugs?component=framework&status=open\")",
+      "Bash(curl -s -w \"\\\\nHTTP: %{http_code}\" --max-time 10 https://errors.cleanlanguage.dev/api/v1/bugs)",
+      "mcp__clean-language__list_component_bugs"
     ],
     "additionalDirectories": [
       "/Users/earcandy/Documents/Dev/Clean Language/.claude/skills",
       "/Users/earcandy/Documents/Dev/Clean Language/.claude",
       "/Users/earcandy/Documents/Dev/Clean Language/.git/hooks",
       "/Users/earcandy/Documents/Dev/Clean Language/Web Site Clean/.claude",
-      "/Users/earcandy/Documents/Dev/Clean Language/Web Site Clean/.claude/rules"
+      "/Users/earcandy/Documents/Dev/Clean Language/Web Site Clean/.claude/rules",
+      "/tmp"
     ]
   },
   "hooks": {
@@ -109,7 +143,7 @@
         "hooks": [
           {
             "type": "prompt",
-            "prompt": "The user is editing a file. Check if the file path in $ARGUMENTS is in a DIFFERENT component folder than the current working directory. Component folders are: clean-language-compiler/, clean-server/, clean-framework/, clean-extension/, clean-manager/, clean-canvas/, clean-ui/, clean-node-server/, clean-llm/, clean-cpanel-plugin/, Web Site Clean/. Shared locations (spec/, management/, platform-architecture/, scripts/, .claude/, CLAUDE.md, TASKS.md) are ALLOWED from any component. If the edit crosses component boundaries (editing a file in clean-server/ while working in clean-language-compiler/), output JSON with decision block and reason. Otherwise allow."
+            "prompt": "The user is editing a file. Check if the file path in $ARGUMENTS is in a DIFFERENT component folder than the current working directory. Component folders are: clean-language-compiler/, clean-server/, clean-framework/, clean-extension/, clean-manager/, clean-canvas/, clean-ui/, clean-node-server/, clean-llm/, clean-cpanel-plugin/, Web Site Clean/. Shared locations (foundation/spec/, foundation/management/, foundation/platform-architecture/, scripts/, .claude/, CLAUDE.md, TASKS.md) are ALLOWED from any component. If the edit crosses component boundaries (editing a file in clean-server/ while working in clean-language-compiler/), output JSON with decision block and reason. Otherwise allow."
           }
         ]
       },
@@ -118,7 +152,7 @@
         "hooks": [
           {
             "type": "prompt",
-            "prompt": "The user is editing a test file in tests/cln/. Check $ARGUMENTS. If this edit WEAKENS the test (removing assertions, changing expected values to match broken output, commenting out failing checks), block it. Principle 5: Never modify tests to make them pass. Fix the compiler instead. Exception: if the test contradicts spec/grammar.ebnf, allow the fix. If the edit adds new tests, fixes spec compliance, or improves coverage, allow it.",
+            "prompt": "The user is editing a test file in tests/cln/. Check $ARGUMENTS. If this edit WEAKENS the test (removing assertions, changing expected values to match broken output, commenting out failing checks), block it. Principle 5: Never modify tests to make them pass. Fix the compiler instead. Exception: if the test contradicts foundation/spec/grammar.ebnf, allow the fix. If the edit adds new tests, fixes spec compliance, or improves coverage, allow it.",
             "if": "Edit(tests/cln/**)"
           }
         ]
@@ -129,7 +163,7 @@
           {
             "type": "prompt",
             "prompt": "Principle 25 — Specification Change Control. The file being edited is a SPECIFICATION file (grammar.ebnf, semantic-rules.md, type-system.md, stdlib-reference.md, or a plugin EBNF). Check $ARGUMENTS. Spec changes require developer approval. If the edit is a typo fix, comment update, or formatting change, allow it. If the edit adds, removes, or modifies any production rule, semantic rule, type rule, function signature, or plugin syntax definition, BLOCK it with: the spec is a controlled document — ask the developer for approval before modifying it. Report what change is being attempted so the developer can decide.",
-            "if": "Edit(spec/**)"
+            "if": "Edit(foundation/spec/**)"
           }
         ]
       }

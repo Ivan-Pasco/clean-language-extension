@@ -13,7 +13,7 @@ alwaysApply: false
 
 ## Testing (Principle 5)
 - Never modify a test to make it pass. Fix the code instead.
-- Exception: if the test contradicts `spec/grammar.ebnf`, fix the test and document why.
+- Exception: if the test contradicts `foundation/spec/grammar.ebnf`, fix the test and document why.
 
 ## Bug Fixes Start with Tests (Principle 21)
 - Before fixing a bug, write a failing test that reproduces it.

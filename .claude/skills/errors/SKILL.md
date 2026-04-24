@@ -11,7 +11,7 @@ This skill is for Clean Language team developers only. External language develop
 
 ## Source of Truth
 
-The production server (`https://errors.cleanlanguage.dev`) is the **only** source of truth for bug status. This skill never reads the local telemetry store. See `management/ERROR_REPORTING_WORKFLOW.md` for the rationale.
+The production server (`https://errors.cleanlanguage.dev`) is the **only** source of truth for bug status. This skill never reads the local telemetry store. See `foundation/management/ERROR_REPORTING_WORKFLOW.md` for the rationale.
 
 If you find yourself wanting to "compare local vs server" — don't. The local store is a transient outbox for unsent reports, not a state mirror. Drift is impossible by design because there is nothing to drift.
 

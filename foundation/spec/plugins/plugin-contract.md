@@ -6,8 +6,8 @@
 
 Related documents:
 - Plugin grammar extensions: `spec/plugins/frame-server.ebnf`, `frame-data.ebnf`, `frame-ui.ebnf`, `frame-auth.ebnf`, `frame-canvas.ebnf`
-- Host bridge function signatures: `platform-architecture/HOST_BRIDGE.md`
-- Execution layer placement rules: `platform-architecture/EXECUTION_LAYERS.md`
+- Host bridge function signatures: `../platform-architecture/HOST_BRIDGE.md`
+- Execution layer placement rules: `../platform-architecture/EXECUTION_LAYERS.md`
 - Plugin architecture guide: `clean-language-compiler/documentation/Plugin-Architecture.md`
 
 ---
@@ -224,7 +224,7 @@ string value = _req_param("id")
 | `number:32` | `f32` | 32-bit float |
 | `boolean` | `i32` | `0` = false, `1` = true |
 
-The `print_integer` and `int_to_string` host bridge functions use `i64` for their integer parameters (per `platform-architecture/HOST_BRIDGE.md`). Plugin bridge functions that operate on integer values should generally use `"integer"` (i32) unless they specifically need 64-bit range, in which case they must declare their parameter in the `[bridge].functions` entry with any required precision annotation.
+The `print_integer` and `int_to_string` host bridge functions use `i64` for their integer parameters (per `../platform-architecture/HOST_BRIDGE.md`). Plugin bridge functions that operate on integer values should generally use `"integer"` (i32) unless they specifically need 64-bit range, in which case they must declare their parameter in the `[bridge].functions` entry with any required precision annotation.
 
 ### 3.4 Return Value Conventions
 
@@ -376,7 +376,7 @@ Rules:
 
 Bridge functions names are unrestricted in content, but the following conventions apply:
 
-- Official host bridge functions (Layer 2, `platform-architecture/HOST_BRIDGE.md`) use snake_case without a leading underscore: `file_read`, `math_sin`, `string_concat`.
+- Official host bridge functions (Layer 2, `../platform-architecture/HOST_BRIDGE.md`) use snake_case without a leading underscore: `file_read`, `math_sin`, `string_concat`.
 - Server extension functions (Layer 3) use a leading underscore: `_http_route`, `_req_param`, `_auth_get_session`.
 - Plugin-declared functions should use a leading underscore plus a plugin-specific prefix to avoid collision: `_myplugin_send_email`.
 
@@ -473,7 +473,7 @@ Built-in plugins are compiled into the compiler binary and are always available 
 
 **Injected types:** `Request`, `Response`
 
-**Layer:** 3 — Server Extensions (see `platform-architecture/EXECUTION_LAYERS.md §Layer 3`). Functions declared by this plugin are only available in a server context. Emitting them in a client-only build violates the Import Minimality Rule.
+**Layer:** 3 — Server Extensions (see `../platform-architecture/EXECUTION_LAYERS.md §Layer 3`). Functions declared by this plugin are only available in a server context. Emitting them in a client-only build violates the Import Minimality Rule.
 
 **Grammar extension:** `spec/plugins/frame-server.ebnf`
 
@@ -565,6 +565,6 @@ The compiler guarantees the following behaviors that plugin authors may rely upo
 
 4. **Type checking after expansion:** The compiler does not type-check raw DSL content. Type checking happens only after expansion, on the generated Clean Language code. Plugin authors are responsible for generating type-correct code.
 
-5. **Import Minimality:** The compiler emits WASM import declarations only for bridge functions that are actually reachable from the compiled module's exports. A bridge function declared in `[bridge].functions` but never called in the expanded code will not appear in the output `.wasm` import section (see `platform-architecture/EXECUTION_LAYERS.md` — Import Minimality Rule).
+5. **Import Minimality:** The compiler emits WASM import declarations only for bridge functions that are actually reachable from the compiled module's exports. A bridge function declared in `[bridge].functions` but never called in the expanded code will not appear in the output `.wasm` import section (see `../platform-architecture/EXECUTION_LAYERS.md` — Import Minimality Rule).
 
 6. **No bridge function implementation in the compiler:** The compiler generates WASM import declarations for bridge functions. Implementations are provided entirely by the host runtime (Layer 2 or Layer 3). The compiler never executes bridge function bodies.

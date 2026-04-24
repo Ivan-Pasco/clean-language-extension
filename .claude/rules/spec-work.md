@@ -13,7 +13,7 @@ alwaysApply: false
 - Exception: fixing typos, comments, and formatting does not require approval.
 
 ## EBNF Before Implementation (Principle 2)
-- New syntax must be defined in `spec/grammar.ebnf` BEFORE implementing it in the compiler.
+- New syntax must be defined in `foundation/spec/grammar.ebnf` BEFORE implementing it in the compiler.
 - The EBNF is the single source of truth for what syntax is valid.
 
 ## Spec-Implementation Parity (Principle 24)
@@ -23,9 +23,9 @@ alwaysApply: false
 
 ## Change Propagation (Principle 12)
 When changing the specification (after developer approval):
-1. Update `spec/grammar.ebnf` (or plugin EBNF)
-2. Update `spec/semantic-rules.md` if semantic behavior changes
-3. Update `spec/type-system.md` if type rules change
+1. Update `foundation/spec/grammar.ebnf` (or plugin EBNF)
+2. Update `foundation/spec/semantic-rules.md` if semantic behavior changes
+3. Update `foundation/spec/type-system.md` if type rules change
 4. Update `Language-Specification.md` prose to match
 5. Report via `report_error` MCP tool for compiler implementation
 

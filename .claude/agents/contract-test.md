@@ -29,13 +29,13 @@ cat ~/.cleen/plugins/frame.server/plugin.toml | grep 'name = "' | head -10
 
 ### Step 2: EBNF-to-Parser Consistency
 
-For each grammar production in `spec/grammar.ebnf`:
+For each grammar production in `foundation/spec/grammar.ebnf`:
 1. Verify the parser handles it (grep for the keyword in parser source)
 2. Verify no parser-only keywords exist that aren't in the EBNF
 
 ```bash
 # Extract EBNF keywords
-grep -oP '"[a-zA-Z_]+"' spec/grammar.ebnf | sort -u | head -20
+grep -oP '"[a-zA-Z_]+"' foundation/spec/grammar.ebnf | sort -u | head -20
 ```
 
 ### Step 3: Plugin Keyword Registration

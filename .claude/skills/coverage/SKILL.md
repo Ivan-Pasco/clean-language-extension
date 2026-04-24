@@ -10,9 +10,9 @@ Measure test coverage against the formal specification.
 ## Instructions
 
 1. **Read the spec files:**
-   - `spec/grammar.ebnf` — extract all production rule names
-   - `spec/semantic-rules.md` — extract all rule codes (SYN*, SEM*, SCOPE*, etc.)
-   - `spec/type-system.md` — extract type categories
+   - `foundation/spec/grammar.ebnf` — extract all production rule names
+   - `foundation/spec/semantic-rules.md` — extract all rule codes (SYN*, SEM*, SCOPE*, etc.)
+   - `foundation/spec/type-system.md` — extract type categories
 
 2. **Read the test files:**
    - Scan `tests/cln/` recursively for all .cln test files
