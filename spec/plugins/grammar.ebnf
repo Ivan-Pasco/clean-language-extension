@@ -1,0 +1,68 @@
+(* ============================================================================ *)
+(* Plugin Grammar Index — EBNF Specification                                  *)
+(* Authority: spec/grammar.ebnf (core) + each plugin file below              *)
+(* Date:      2026-04-19                                                      *)
+(* ============================================================================ *)
+
+(* This file is the entry point for all plugin grammar extensions.            *)
+(*                                                                             *)
+(* The core language grammar is defined in:                                   *)
+(*   spec/grammar.ebnf                                                        *)
+(*                                                                             *)
+(* Each plugin extends the core grammar with additional block types,          *)
+(* directive keywords, and DSL constructs. Plugin grammars operate at         *)
+(* Stage 2.5 of the compilation pipeline (between parsing and semantic        *)
+(* analysis). Plugin syntax is valid only when the plugin is declared in      *)
+(* the file's plugins: block.                                                 *)
+(*                                                                             *)
+(* Plugin grammar files:                                                      *)
+(*   frame-server.ebnf  — HTTP endpoints, routing, request/response           *)
+(*   frame-data.ebnf    — ORM models, queries, migrations                     *)
+(*   frame-ui.ebnf      — Components, HTML directives, styles                 *)
+(*   frame-auth.ebnf    — Sessions, JWT, roles, CSRF                          *)
+(*   frame-canvas.ebnf  — Canvas scenes, drawing, audio, input                *)
+(*                                                                             *)
+(* Compiler-plugin interface contract:                                        *)
+(*   plugin-contract.md — Bridge functions, block expansion, type exposure    *)
+(* ============================================================================ *)
+
+(* Root extension point in the core grammar:                                  *)
+(*                                                                             *)
+(*   framework_block = plugin_keyword , ":" , NEWLINE ,                       *)
+(*                     INDENT , { framework_statement } , DEDENT ;            *)
+(*                                                                             *)
+(*   plugin_keyword = "endpoints" | "data" | "component" | "auth"            *)
+(*                  | "canvas" | <plugin-defined-keyword> ;                   *)
+(*                                                                             *)
+(* Each plugin registers its keyword(s) via plugin.toml [grammar] section.   *)
+(* The compiler routes framework_block to the owning plugin's expand_block.   *)
+
+(* ============================================================================ *)
+(* Shared Plugin Primitives                                                    *)
+(* ============================================================================ *)
+
+(* Identifier shared across all plugins *)
+plugin_identifier = LETTER , { LETTER | DIGIT | "_" } ;
+
+(* HTTP method literals used by frame-server *)
+http_method = "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "HEAD" | "OPTIONS" ;
+
+(* Route path segment used by frame-server *)
+route_path     = "/" , { route_segment , "/" } , [ route_segment ] ;
+route_segment  = route_param | route_literal ;
+route_param    = ":" , plugin_identifier ;
+route_literal  = { LETTER | DIGIT | "-" | "_" | "." } ;
+
+(* Attribute syntax used across plugins *)
+framework_attribute = "@" , plugin_identifier , [ "(" , attribute_arg_list , ")" ] ;
+attribute_arg_list  = attribute_arg , { "," , attribute_arg } ;
+attribute_arg       = plugin_identifier , "=" , attribute_value
+                    | attribute_value ;
+attribute_value     = string_literal | number_literal | boolean_literal | plugin_identifier ;
+
+(* Type references used in plugin-generated code *)
+plugin_type_ref  = plugin_identifier , [ "<" , plugin_type_ref , ">" ] ;
+
+(* ============================================================================ *)
+(* End of shared primitives — see individual plugin files for full grammars    *)
+(* ============================================================================ *)
