@@ -5,6 +5,11 @@
 
 Complete reference for all portable host functions available in the `host-bridge` library.
 
+> **Note:** Hosts are only required to provide the host-bridge functions
+> a compiled module actually imports. See the **Import Minimality Rule**
+> in [`EXECUTION_LAYERS.md`](EXECUTION_LAYERS.md) for the compiler's
+> tree-shaking obligation.
+
 ## Function Signatures
 
 All functions use the following conventions:

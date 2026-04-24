@@ -1,8 +1,8 @@
 # Clean Language Type System
 
 **Authority:** This file is the single source of truth for type compatibility, precision, and conversions (Principle 3).
-**Version:** 1.0.0
-**Date:** 2026-04-12
+**Version:** 1.1.0
+**Date:** 2026-04-19
 
 ---
 
@@ -15,7 +15,7 @@
 | `string` | Immutable UTF-8 text | I32 (pointer to `[len:i32][data:u8*]`) | "" |
 | `boolean` | True or false | I32 (0=false, non-zero=true) | false |
 | `void` | No value (function return only) | — | — |
-| `any` | Dynamically typed value | I32 (pointer to `[tag:i32][v1:i32][v2:i32]`) | null |
+| `any` | Compile-time generic escape hatch (see §9 for full semantics) | — (see §9) | null |
 | `null` | Absent value | I32 (0) | null |
 
 ---
@@ -60,14 +60,18 @@ Unqualified `number` is equivalent to `number:64`.
 
 Lists support runtime behavior configuration:
 
-| Mode | Behavior |
-|------|----------|
-| default | Ordered, duplicates allowed |
-| `"line"` | FIFO queue |
-| `"pile"` | LIFO stack |
-| `"unique"` | Set (no duplicates) |
-| `"line-unique"` | FIFO + unique |
-| `"pile-unique"` | LIFO + unique |
+List behaviors are declared using dot notation on the type: `list<T>.line`, `list<T>.pile`, `list<T>.unique`, or combinations. The full set of valid suffixes is:
+
+| Suffix | Behavior |
+|--------|----------|
+| *(none)* | Default — ordered, duplicates allowed |
+| `.line` | FIFO queue — add to back, remove from front |
+| `.pile` | LIFO stack — add and remove from top |
+| `.unique` | Set — no duplicates; silently ignores duplicate additions |
+| `.line.pile` | FIFO + LIFO combined |
+| `.line.unique` | FIFO queue with uniqueness |
+| `.pile.unique` | LIFO stack with uniqueness |
+| `.line.unique.pile` | All three behaviors combined |
 
 ---
 
@@ -187,42 +191,63 @@ Returns `value` if non-null, otherwise returns `fallback`. Both sides must have 
 
 ### The `!` Operator (Required/Non-Null Assertion)
 
+The `!` (required assertion) operator is a **postfix** operator written immediately after an expression:
+
 ```clean
-value!
+value!    // ✅ Correct postfix form
+!value    // ❌ Not valid — ! is not a prefix operator
 ```
 
-Postfix operator. Asserts at runtime that `value` is not null. If null, execution traps. The expression type is unchanged — this is a runtime check, not a type transformation.
+- **Compile time**: the compiler treats the result as non-null — subsequent type checking proceeds as if the value cannot be null.
+- **Runtime**: if the value is actually null, the program halts immediately with a null assertion error (RUN004).
+- The declared type of the expression is unchanged at the type-system level; the `!` is a runtime contract, not a type transformation.
+
+**Common usage:**
+```clean
+string name = getText()!                    // halts if getText() returns null
+string upper = getText()!.toUpperCase()     // checked before method call
+```
 
 ---
 
 ## 9. The `any` Type
 
-### Memory Layout
+`any` is a **compile-time generic escape hatch**. The compiler skips type
+checking for values declared as `any`, trusting the developer that the types
+are correct at runtime. There is no mandatory runtime boxing, no type tag, and
+no overhead beyond what the host bridge happens to produce for a specific value.
 
-```
-[tag:i32][value1:i32][value2:i32]   // 12 bytes on heap
-```
+Use `any` only when the type genuinely cannot be known at compile time — such
+as plugin return values, JSON parsing results, or dynamically-typed external
+data. For known types, always use the specific type instead.
 
-### Type Tags
+### Rules
 
-| Tag | Value | Type |
-|-----|-------|------|
+- Any type can be assigned to `any` — the compiler accepts the assignment without inserting a conversion.
+- `any` can be assigned to any type — the compiler also accepts this; type correctness is the developer's responsibility.
+- `any[string_key]` → `any` (object/pairs field access)
+- `any[integer_index]` → `any` (array element access)
+- `any.field` → `any` (dot-notation field access on JSON/pairs data)
+- `any.toString()` → `string`
+- Other method calls on `any` return `any`
+
+### When `any` Has a Host-Level Tag
+
+When `any` is returned by a host bridge function (e.g., `json.textToData`),
+the runtime host may attach a type tag internally to support dot-notation
+field access and array indexing on opaque values. This is a host implementation
+detail — the Clean Language type system does not mandate a tag or memory layout
+for `any`. The tag values shown below apply only to the standard runtime host:
+
+| Tag | Value | Host-level type |
+|-----|-------|-----------------|
 | 0 | Null | null |
 | 1 | Integer | integer |
 | 2 | Boolean | boolean |
 | 3 | Number | number |
 | 4 | String | string |
 | 5 | List | list |
-| 6 | Object | pairs/class |
-
-### Rules
-
-- Any type can be assigned to `any` (boxing with type tag)
-- `any` can be assigned to any type (unboxing with runtime type check)
-- `any[string_key]` → `any` (object field access)
-- `any[integer_index]` → `any` (array element access)
-- `any.toString()` → `string`
-- Other method calls on `any` return `any`
+| 6 | Object | pairs/class instance |
 
 ---
 
@@ -258,9 +283,51 @@ Type parameters are resolved at compile time using Hindley-Milner constraint sol
 9. Allow `any` to unify with anything
 10. Reject if no rule matches (SEM001)
 
+### Variance
+
+`list<T>` is **covariant** in `T` — a `list<Dog>` is assignable to `list<Animal>` if
+`Dog` is a subtype of `Animal` (i.e., `Dog` inherits from `Animal`).
+
+Function parameter types are **contravariant**: if a function F1 accepts a
+supertype where F2 accepts a subtype, F1 is assignable to F2's function type.
+Function return types are **covariant**: if F1 returns a subtype of F2's return
+type, F1 is assignable to F2's function type.
+
 ---
 
-## 11. Primitive Type Methods
+## 11. Expression Evaluation Semantics
+
+### Argument Evaluation Order
+
+Function arguments are evaluated **left-to-right** before the function is
+called. Side effects in argument expressions (such as function calls that
+mutate state) occur in left-to-right order.
+
+```clean
+// If sideEffect() mutates global state, the first call runs before the second
+result = combine(sideEffect(1), sideEffect(2))
+// sideEffect(1) evaluates first, then sideEffect(2), then combine() is called
+```
+
+### Default Parameter Evaluation
+
+Default parameter values are evaluated **lazily** — only when the argument is
+omitted at a call site, and fresh on each call. They are not evaluated at
+function definition time.
+
+```clean
+functions:
+    void example(string msg = buildMessage())
+        // buildMessage() is called each time example() is called without msg,
+        // not when the functions: block is loaded
+```
+
+This means default values can safely include function calls, and the result may
+differ between calls if the called function has side effects or reads state.
+
+---
+
+## 12. Primitive Type Methods
 
 ### Integer Methods
 

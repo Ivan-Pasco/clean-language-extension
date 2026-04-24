@@ -359,3 +359,18 @@ Files Affected: [List of files in the target component that need changes]
 - Make changes to other components' configuration files
 - Modify shared resources without coordination
 - Skip the prompt creation step for cross-component issues
+
+## Documentation Sync Protocol
+
+Facts about the language live in `spec/` (at the project root). Facts about the platform live in `platform-architecture/`. Do not duplicate them here — link to them instead.
+
+The extension is a thin LSP client. It does not define language rules, host bridge functions, or execution layers. When a change in this component exposes a gap in how the language server communicates with the IDE, report it via `report_error` — the language server lives in the compiler.
+
+**When you make a change in this component that touches IDE integration contracts, update the corresponding spec file in the same commit:**
+
+| Change type | Update required |
+|-------------|-----------------|
+| New or changed execution layer | `platform-architecture/EXECUTION_LAYERS.md` |
+| New or changed IDE architecture contract | `platform-architecture/IDE_EXTENSION_ARCHITECTURE.md` |
+
+The spec files are the single source of truth. Component documentation explains implementation — it does not redefine language rules.

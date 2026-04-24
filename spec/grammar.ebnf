@@ -1,7 +1,7 @@
 (* ============================================================================ *)
 (* Clean Language Grammar — EBNF Specification                                *)
-(* Version: 1.0.0                                                            *)
-(* Date: 2026-04-12                                                          *)
+(* Version: 1.1.0                                                            *)
+(* Date: 2026-04-19                                                          *)
 (* Authority: This file is the single source of truth for Clean Language      *)
 (*            syntax (Principle 2). The compiler's grammar.pest is an         *)
 (*            implementation of this spec. If they diverge, grammar.pest      *)
@@ -189,10 +189,12 @@ type            = matrix_type | list_type | pairs_type | generic_type
                 | sized_type | core_type | identifier | type_parameter ;
 
 variable_type   = matrix_type | list_type | pairs_type
-                | sized_type | core_type | identifier ;
+                | sized_type | core_type | handler_type | identifier ;
+
+handler_type    = "handler" ;
 
 parameter_type  = matrix_type | list_type | pairs_type
-                | sized_type | core_type | identifier ;
+                | sized_type | core_type | handler_type | identifier ;
 
 function_return_type
                 = matrix_type | list_type | pairs_type | generic_type
@@ -409,6 +411,7 @@ single_line_expression
 (* ======================================================================== *)
 
 statement       = require_statement
+                | print_block_statement
                 | print_newline_statement
                 | print_parenthesized_statement
                 | print_bare_statement
@@ -479,6 +482,12 @@ print_bare_statement
                 = "print"
                 , NOT ( ALPHANUMERIC | "_" | ":" )
                 , single_line_expression ;
+
+print_block_statement
+                = "print" , ":" , NEWLINE
+                , INDENT , { INDENT } , single_line_expression
+                , { NEWLINE , { empty_line }
+                  , INDENT , { INDENT } , single_line_expression } ;
 
 
 (* --- 4.5 Error --- *)
@@ -883,9 +892,22 @@ indented_expressions
    The block content is passed as raw text to the plugin's expand()
    function, which returns Clean Language code.
 
+   Attributes (e.g. @version, @auth, @cache) may precede the block name.
+   They are passed to the plugin and can affect code generation.
+
    See spec/plugins/*.ebnf for plugin-specific grammar extensions. *)
 
-framework_block = NOT keyword
+framework_attribute
+                = "@" , identifier , [ "(" , attribute_arg_list , ")" ] ;
+
+attribute_arg_list
+                = attribute_arg , { "," , attribute_arg } ;
+
+attribute_arg   = ( identifier , ":" , single_line_expression )
+                | single_line_expression ;
+
+framework_block = { framework_attribute , NEWLINE }
+                , NOT keyword
                 , NOT ( "constant" | "functions" | "tests" | "private" )
                 , identifier , [ string_literal | identifier ] , ":"
                 , framework_block_content ;
