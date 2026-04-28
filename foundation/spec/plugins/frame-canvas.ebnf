@@ -1,417 +1,1096 @@
 (* ============================================================================ *)
 (* frame-canvas Plugin Grammar — EBNF Specification                           *)
-(* Plugin:  frame-canvas                                                      *)
-(* Version: 1.0.0                                                             *)
-(* Date:    2026-04-12                                                        *)
+(* Plugin:  frame.canvas                                                      *)
+(* Version: 2.1.0                                                             *)
+(* Date:    2026-04-27                                                        *)
 (* Extends: Clean Language core grammar (spec/grammar.ebnf)                  *)
 (*                                                                            *)
-(* This file specifies the syntax extensions introduced by the frame-canvas   *)
-(* plugin. It defines the canvasScene block, per-frame lifecycle hooks,       *)
-(* event handler blocks, the drawing API, asset loading, audio, input,        *)
-(* animation, collision detection, camera control, easing functions, and      *)
-(* scene management.                                                          *)
+(* This file specifies all syntax extensions introduced by the frame.canvas   *)
+(* plugin. It covers: scene declaration, assets, state, layers, animation     *)
+(* system (tweens, timelines, animState, animSprite, particles, paths,        *)
+(* gradients, custom easing), camera, drawing API, audio, input, collision,   *)
+(* scene management, and the canvas/UI bridge.                                *)
 (*                                                                            *)
-(* All core grammar productions (expression, identifier, type, statement,     *)
-(* string_literal, etc.) are inherited from spec/grammar.ebnf without        *)
+(* All core grammar productions (expression, identifier, statement, type,     *)
+(* string_literal, integer_literal, number_literal, boolean_literal,          *)
+(* INDENT, NEWLINE) are inherited from spec/grammar.ebnf without              *)
 (* redefinition.                                                              *)
+(*                                                                            *)
+(* Named-attribute convention:                                                *)
+(*   attr = identifier , "=" , expression                                     *)
+(*   All canvas.* calls use named attributes, never positional arguments.     *)
+(*   ":" at end of a call means an indented body of child statements follows. *)
 (* ============================================================================ *)
 
 
 (* ======================================================================== *)
-(* 1. CANVAS SCENE BLOCK                                                    *)
+(* §1. NAMED ATTRIBUTE PRIMITIVES                                            *)
 (* ======================================================================== *)
 
-(* canvasScene is the top-level container for a 2D canvas application.     *)
-(* Dimension attributes (width, height) may be integer literals or         *)
-(* identifier references to constants.                                     *)
+(* Foundation pattern used throughout this grammar.                         *)
 
-canvas_scene_block  = "canvasScene" , ":" , canvas_scene_attrs , NEWLINE
-                    , INDENT , { canvas_scene_section } ;
+named_attr          = identifier , "=" , expression ;
 
-canvas_scene_attrs  = { canvas_attr } ;
+(* Attributes that take a string literal value.                             *)
+string_attr         = identifier , "=" , string_literal ;
 
-canvas_attr         = canvas_width_attr
-                    | canvas_height_attr
-                    | canvas_fps_attr
-                    | canvas_background_attr ;
+(* Attributes that take a numeric expression.                               *)
+number_attr         = identifier , "=" , expression ;
 
-canvas_width_attr   = "width"      , "=" , integer_expression ;
-canvas_height_attr  = "height"     , "=" , integer_expression ;
-canvas_fps_attr     = "fps"        , "=" , integer_expression ;
+(* Attributes that take a boolean.                                          *)
+bool_attr           = identifier , "=" , boolean_literal ;
 
-(* background accepts a CSS color string or a color constant identifier.   *)
-canvas_background_attr
-                    = "background" , "=" , ( string_literal | identifier ) ;
+
+(* ======================================================================== *)
+(* §2. CANVAS SCENE BLOCK                                                   *)
+(* ======================================================================== *)
+
+(* One canvasScene per file. Owns all sub-blocks as children.               *)
+
+canvas_scene_block  = "canvasScene" , ":" , { scene_attr } , NEWLINE
+                    , INDENT , { canvas_scene_section } , DEDENT ;
+
+scene_attr          = "width"      , "=" , integer_expression
+                    | "height"     , "=" , integer_expression
+                    | "fps"        , "=" , integer_expression
+                    | "background" , "=" , ( string_literal | identifier )
+                    | "id"         , "=" , string_literal ;
 
 integer_expression  = integer_literal | identifier ;
 
 canvas_scene_section
                     = assets_section
+                    | layers_section
+                    | state_section
+                    | tween_declaration
+                    | timeline_declaration
+                    | anim_state_declaration
+                    | anim_sprite_declaration
+                    | particles_declaration
+                    | path_declaration
+                    | gradient_declaration
+                    | custom_ease_declaration
+                    | camera_section
                     | init_section
                     | draw_section
                     | on_frame_handler
                     | on_pointer_down_handler
                     | on_pointer_move_handler
-                    | on_key_down_handler ;
+                    | on_pointer_up_handler
+                    | on_key_down_handler
+                    | on_key_up_handler
+                    | on_exit_handler
+                    | on_pause_handler
+                    | on_resume_handler ;
 
 
 (* ======================================================================== *)
-(* 2. ASSETS SECTION                                                        *)
+(* §3. ASSETS SECTION                                                       *)
 (* ======================================================================== *)
 
-(* assets_section loads all media resources before the scene starts.       *)
-(* Calls to sprite.load and audio.load* inside this block are guaranteed   *)
-(* to complete before init: executes.                                       *)
+(* All media assets are declared here before the scene starts. Each asset   *)
+(* is a single-line declaration with named attributes.                      *)
 
 assets_section      = "assets" , ":" , NEWLINE
-                    , INDENT , INDENT , { asset_load_statement , NEWLINE } ;
+                    , INDENT , { asset_declaration , NEWLINE } , DEDENT ;
 
-asset_load_statement
-                    = sprite_load_call
-                    | audio_load_sound_call
-                    | audio_load_music_call ;
+asset_declaration   = image_asset
+                    | spritesheet_asset
+                    | sound_asset
+                    | music_asset
+                    | font_asset ;
 
-(* sprite.load("path", frameWidth, frameHeight) — loads a sprite sheet.   *)
-sprite_load_call    = "sprite" , "." , "load"
-                    , "(" , string_literal
-                    , "," , expression
-                    , "," , expression , ")" ;
+(* image "name" src="path/to/image.png"                                     *)
+image_asset         = "image" , string_literal , "src" , "=" , string_literal ;
 
-(* audio.loadSound("path") — loads a short sound effect into memory.      *)
-audio_load_sound_call
-                    = "audio" , "." , "loadSound" , "(" , string_literal , ")" ;
+(* spritesheet "name" src="path" frameWidth=48 frameHeight=64               *)
+(* Optional: cols=, rows= for grid layout.                                  *)
+spritesheet_asset   = "spritesheet" , string_literal
+                    , "src" , "=" , string_literal
+                    , "frameWidth" , "=" , integer_expression
+                    , "frameHeight" , "=" , integer_expression
+                    , { spritesheet_opt_attr } ;
 
-(* audio.loadMusic("path") — streams a background music track.            *)
-audio_load_music_call
-                    = "audio" , "." , "loadMusic" , "(" , string_literal , ")" ;
+spritesheet_opt_attr
+                    = "cols" , "=" , integer_expression
+                    | "rows" , "=" , integer_expression ;
+
+(* sound "name" src="path/to/sfx.wav"                                       *)
+sound_asset         = "sound" , string_literal , "src" , "=" , string_literal ;
+
+(* music "name" src="path/to/track.ogg"                                     *)
+music_asset         = "music" , string_literal , "src" , "=" , string_literal ;
+
+(* font "name" src="path/to/font.woff2"                                     *)
+font_asset          = "font"  , string_literal , "src" , "=" , string_literal ;
 
 
 (* ======================================================================== *)
-(* 3. LIFECYCLE SECTIONS                                                    *)
+(* §4. LAYERS SECTION                                                       *)
 (* ======================================================================== *)
 
-(* --- 3.1 Init Section --- *)
+(* Named render layers sorted by z-order. Lower z is drawn first.           *)
 
-(* init runs once when the scene is first entered. Use it to reset state   *)
-(* variables, position entities, and start any initial animations.         *)
+layers_section      = "layers" , ":" , NEWLINE
+                    , INDENT , { layer_declaration , NEWLINE } , DEDENT ;
+
+(* layer "name" z=0                                                         *)
+layer_declaration   = "layer" , string_literal , "z" , "=" , integer_expression ;
+
+
+(* ======================================================================== *)
+(* §5. STATE SECTION                                                        *)
+(* ======================================================================== *)
+
+(* Persistent mutable variables for the scene. Declared with type and       *)
+(* initial value using standard Clean Language variable declaration syntax.  *)
+
+state_section       = "state" , ":" , NEWLINE
+                    , INDENT , { state_variable_decl , NEWLINE } , DEDENT ;
+
+(* Standard Clean Language typed variable declaration, e.g.:                *)
+(*   number x = 0.0                                                         *)
+(*   integer score = 0                                                      *)
+(*   string playerName = "hero"                                             *)
+state_variable_decl = type_name , identifier , "=" , expression ;
+
+type_name           = "integer" | "number" | "string" | "boolean" ;
+
+
+(* ======================================================================== *)
+(* §6. TWEEN DECLARATION                                                    *)
+(* ======================================================================== *)
+
+(* Named tween — does not play until triggered.                             *)
+(* Variable-first syntax: the identifier being animated appears at the      *)
+(* start of its own line, with from= and to= as flat attributes.            *)
+
+tween_declaration   = "tween" , string_literal , ":" , NEWLINE
+                    , INDENT , { tween_line } , DEDENT ;
+
+tween_line          = tween_variable_line
+                    | tween_config_line ;
+
+(* varName from=expr to=expr  — defines the animated variable.             *)
+(* from= is optional (starts from current value if omitted).                *)
+tween_variable_line = identifier
+                    , [ "from" , "=" , expression ]
+                    , "to" , "=" , expression
+                    , NEWLINE ;
+
+(* duration = 1.0 / ease = "easeOutElastic" / etc.                         *)
+tween_config_line   = tween_config_attr , NEWLINE ;
+
+tween_config_attr   = "duration"   , "=" , expression
+                    | "ease"       , "=" , string_literal
+                    | "delay"      , "=" , expression
+                    | "repeat"     , "=" , expression
+                    | "yoyo"       , "=" , boolean_literal
+                    | "along"      , "=" , string_literal
+                    | "orient"     , "=" , boolean_literal
+                    | "onComplete" , "=" , string_literal ;
+
+
+(* ======================================================================== *)
+(* §7. TIMELINE DECLARATION                                                 *)
+(* ======================================================================== *)
+
+(* Named timeline — sequences tweens and inline animate expressions.        *)
+
+timeline_declaration
+                    = "timeline" , string_literal , ":" , NEWLINE
+                    , INDENT , { timeline_step } , DEDENT ;
+
+timeline_step       = timeline_at_step
+                    | timeline_after_step
+                    | timeline_together_step ;
+
+(* at <time>: — absolute time position in seconds from start.               *)
+timeline_at_step    = "at" , expression , ":" , NEWLINE
+                    , INDENT , { timeline_action } , DEDENT ;
+
+(* after: — immediately after previous step ends.                           *)
+(* after overlap=0.2: — start 0.2s before previous step ends.              *)
+(* after gap=0.3: — start 0.3s after previous step ends.                   *)
+timeline_after_step = "after" , [ timeline_after_offset ] , ":" , NEWLINE
+                    , INDENT , { timeline_action } , DEDENT ;
+
+timeline_after_offset
+                    = "overlap" , "=" , expression
+                    | "gap"     , "=" , expression ;
+
+(* together: — all actions start at the same time.                          *)
+(* together stagger=0.08: — each child delayed by stagger seconds more.    *)
+timeline_together_step
+                    = "together" , [ "stagger" , "=" , expression ] , ":" , NEWLINE
+                    , INDENT , { timeline_action } , DEDENT ;
+
+timeline_action     = tween_reference
+                    | animate_expression
+                    | statement ;
+
+(* Reference to a named tween: just its name string.                        *)
+tween_reference     = "tween" , string_literal , NEWLINE ;
+
+(* Inline animate expression (see §16).                                     *)
+animate_expression  = "animate" , identifier
+                    , [ "from" , "=" , expression ]
+                    , "to" , "=" , expression
+                    , "duration" , "=" , expression
+                    , [ "ease" , "=" , string_literal ]
+                    , NEWLINE ;
+
+
+(* ======================================================================== *)
+(* §8. ANIMSTATE DECLARATION                                                *)
+(* ======================================================================== *)
+
+(* Finite state machine driving sprite animation.                           *)
+
+anim_state_declaration
+                    = "animState" , string_literal , ":" , NEWLINE
+                    , INDENT , { anim_state_body_section } , DEDENT ;
+
+anim_state_body_section
+                    = anim_state_state_block
+                    | anim_state_transitions_block
+                    | "initial" , "=" , string_literal , NEWLINE ;
+
+(* state "name": — defines one FSM state and its drawing logic.            *)
+anim_state_state_block
+                    = "state" , string_literal , ":" , NEWLINE
+                    , INDENT , { draw_statement } , DEDENT ;
+
+(* transitions: — defines all transition rules.                             *)
+anim_state_transitions_block
+                    = "transitions" , ":" , NEWLINE
+                    , INDENT , { transition_rule } , DEDENT ;
+
+(* "fromState" -> "toState" when condition                                  *)
+(* "state" onComplete "nextState"  — fires when animSprite finishes cycle.  *)
+transition_rule     = string_literal , "->" , string_literal , "when" , expression , NEWLINE
+                    | string_literal , "onComplete" , string_literal , NEWLINE ;
+
+
+(* ======================================================================== *)
+(* §9. ANIMSPRITE DECLARATION                                               *)
+(* ======================================================================== *)
+
+(* Named clip definition — a sub-range of a spritesheet with playback opts. *)
+
+anim_sprite_declaration
+                    = "animSprite" , string_literal , ":" , NEWLINE
+                    , INDENT , { anim_sprite_attr , NEWLINE } , DEDENT ;
+
+anim_sprite_attr    = "sheet"  , "=" , string_literal
+                    | "frames" , "=" , frame_range
+                    | "fps"    , "=" , expression
+                    | "loop"   , "=" , boolean_literal ;
+
+(* Frame range: start..end (inclusive).                                     *)
+frame_range         = integer_literal , ".." , integer_literal ;
+
+
+(* ======================================================================== *)
+(* §10. PARTICLES DECLARATION                                               *)
+(* ======================================================================== *)
+
+particles_declaration
+                    = "particles" , string_literal , ":" , NEWLINE
+                    , INDENT , { particles_section } , DEDENT ;
+
+particles_section   = particles_emitter_block
+                    | particles_over_lifetime_block
+                    | particles_forces_block
+                    | particles_top_attr , NEWLINE ;
+
+(* Top-level particle config: lifetime, speed, angle, color, shape, etc.    *)
+particles_top_attr  = "lifetime"  , "=" , value_range
+                    | "speed"     , "=" , value_range
+                    | "angle"     , "=" , value_range
+                    | "color"     , "=" , string_literal
+                    | "shape"     , "=" , string_literal
+                    | "image"     , "=" , string_literal
+                    | "radius"    , "=" , expression
+                    | "size"      , "=" , expression ;
+
+(* emitter: — rate and emission shape.                                      *)
+particles_emitter_block
+                    = "emitter" , ":" , NEWLINE
+                    , INDENT , { emitter_attr , NEWLINE } , DEDENT ;
+
+emitter_attr        = "rate"   , "=" , expression
+                    | "shape"  , "=" , string_literal
+                    | "radius" , "=" , expression
+                    | "width"  , "=" , expression
+                    | "height" , "=" , expression ;
+
+(* overLifetime: — properties that animate from start to end of lifetime.   *)
+particles_over_lifetime_block
+                    = "overLifetime" , ":" , NEWLINE
+                    , INDENT , { over_lifetime_attr , NEWLINE } , DEDENT ;
+
+over_lifetime_attr  = "size"  , "=" , value_range
+                    | "alpha" , "=" , value_range
+                    | "color" , "=" , color_range
+                    | "speed" , "=" , value_range ;
+
+(* forces: — environmental forces applied to live particles.                *)
+particles_forces_block
+                    = "forces" , ":" , NEWLINE
+                    , INDENT , { particles_force , NEWLINE } , DEDENT ;
+
+particles_force     = "gravity"     , "=" , expression
+                    | "drag"        , "=" , expression
+                    | "wind"        , "x" , "=" , expression , "y" , "=" , expression
+                    | "turbulence"  , "strength" , "=" , expression
+                                    , "scale"    , "=" , expression
+                    | "attractor"   , "x" , "=" , expression
+                                    , "y" , "=" , expression
+                                    , "strength" , "=" , expression ;
+
+(* value_range: 1.0..3.0 — min..max for randomized particle properties.    *)
+value_range         = expression , ".." , expression ;
+
+(* color_range: "#ff0000".."#0000ff" — interpolated color over lifetime.   *)
+color_range         = string_literal , ".." , string_literal ;
+
+
+(* ======================================================================== *)
+(* §11. PATH DECLARATION                                                    *)
+(* ======================================================================== *)
+
+(* Named vector path — used for drawing or path-following tweens.           *)
+
+path_declaration    = "path" , string_literal , ":" , NEWLINE
+                    , INDENT , { path_command , NEWLINE } , DEDENT ;
+
+path_command        = path_move_to
+                    | path_line_to
+                    | path_curve_to
+                    | path_arc_to
+                    | path_close
+                    | "closed" , "=" , boolean_literal ;
+
+(* moveTo x=0 y=0 — move pen without drawing.                               *)
+path_move_to        = "moveTo"  , "x" , "=" , expression , "y" , "=" , expression ;
+
+(* lineTo x=400 y=0 — straight line to point.                               *)
+path_line_to        = "lineTo"  , "x" , "=" , expression , "y" , "=" , expression ;
+
+(* curveTo x=200 y=100 cx=100 cy=-50 — cubic Bézier.                       *)
+(* Also accepts cp1x/cp1y/cp2x/cp2y for full cubic control.                *)
+path_curve_to       = "curveTo"
+                    , "x"  , "=" , expression
+                    , "y"  , "=" , expression
+                    , ( ( "cx"   , "=" , expression , "cy"   , "=" , expression )
+                      | ( "cp1x" , "=" , expression , "cp1y" , "=" , expression
+                        , "cp2x" , "=" , expression , "cp2y" , "=" , expression ) ) ;
+
+(* arcTo x= y= radius= startAngle= endAngle=                               *)
+path_arc_to         = "arcTo"
+                    , "x"          , "=" , expression
+                    , "y"          , "=" , expression
+                    , "radius"     , "=" , expression
+                    , "startAngle" , "=" , expression
+                    , "endAngle"   , "=" , expression ;
+
+path_close          = "closePath" ;
+
+
+(* ======================================================================== *)
+(* §12. GRADIENT DECLARATION                                                *)
+(* ======================================================================== *)
+
+gradient_declaration
+                    = "gradient" , string_literal , gradient_type , ":" , NEWLINE
+                    , INDENT , { gradient_stop , NEWLINE } , DEDENT ;
+
+gradient_type       = gradient_linear_type
+                    | gradient_radial_type ;
+
+(* linear x1=0 y1=0 x2=800 y2=0                                            *)
+gradient_linear_type
+                    = "linear"
+                    , "x1" , "=" , expression , "y1" , "=" , expression
+                    , "x2" , "=" , expression , "y2" , "=" , expression ;
+
+(* radial cx=400 cy=300 r=200                                               *)
+gradient_radial_type
+                    = "radial"
+                    , "cx" , "=" , expression
+                    , "cy" , "=" , expression
+                    , "r"  , "=" , expression ;
+
+(* stop 0.0 "#3b82f6"                                                       *)
+gradient_stop       = "stop" , expression , string_literal ;
+
+
+(* ======================================================================== *)
+(* §13. CUSTOM EASE DECLARATION                                             *)
+(* ======================================================================== *)
+
+(* Single-line declaration at scene level. Registers a cubic-bezier easing  *)
+(* by name. Referenced as ease = "name" in any tween or animate expression. *)
+
+custom_ease_declaration
+                    = "customEase" , string_literal
+                    , "x1" , "=" , expression
+                    , "y1" , "=" , expression
+                    , "x2" , "=" , expression
+                    , "y2" , "=" , expression
+                    , NEWLINE ;
+
+
+(* ======================================================================== *)
+(* §14. CAMERA SECTION                                                      *)
+(* ======================================================================== *)
+
+(* Flat camelCase attributes — max 2 levels deep (no nested sub-blocks).    *)
+
+camera_section      = "camera" , ":" , NEWLINE
+                    , INDENT , { camera_attr , NEWLINE } , DEDENT ;
+
+camera_attr         = "followX"       , "=" , expression
+                    | "followY"       , "=" , expression
+                    | "smoothing"     , "=" , expression
+                    | "deadzoneWidth" , "=" , expression
+                    | "deadzoneHeight", "=" , expression
+                    | "boundsX"       , "=" , expression
+                    | "boundsY"       , "=" , expression
+                    | "boundsWidth"   , "=" , expression
+                    | "boundsHeight"  , "=" , expression
+                    | "zoom"          , "=" , expression ;
+
+
+(* ======================================================================== *)
+(* §15. INIT SECTION                                                        *)
+(* ======================================================================== *)
+
+(* Runs once when the scene first becomes active.                           *)
 
 init_section        = "init" , ":" , NEWLINE
-                    , INDENT , INDENT , { statement } ;
+                    , INDENT , { statement } , DEDENT ;
 
 
-(* --- 3.2 Draw Section --- *)
+(* ======================================================================== *)
+(* §16. DRAW SECTION                                                        *)
+(* ======================================================================== *)
 
-(* draw runs every frame after update logic. It should contain only canvas  *)
-(* drawing calls; game state should be mutated in on_frame handlers.       *)
+(* Runs every frame. Contains drawing calls only — mutate state in onFrame. *)
 
 draw_section        = "draw" , ":" , NEWLINE
-                    , INDENT , INDENT , { draw_statement } ;
+                    , INDENT , { draw_statement } , DEDENT ;
 
-draw_statement      = canvas_call
-                    | sprite_draw_call
+draw_statement      = canvas_call , NEWLINE
+                    | layer_routing_block
+                    | canvas_group_block
+                    | canvas_clip_block
+                    | canvas_effect_block
                     | statement ;
 
 
 (* ======================================================================== *)
-(* 4. EVENT HANDLER BLOCKS                                                  *)
+(* §17. DRAWING API — canvas.* CALLS                                        *)
 (* ======================================================================== *)
 
-(* --- 4.1 onFrame --- *)
-
-(* onFrame runs once per animation frame. The optional param attribute      *)
-(* names the delta-time variable injected into the block body.              *)
-
-on_frame_handler    = "onFrame" , [ on_frame_params ] , ":" , NEWLINE
-                    , INDENT , INDENT , { statement } ;
-
-on_frame_params     = "param" , "=" , string_literal ;  (* e.g. param="dt" *)
-
-
-(* --- 4.2 onPointerDown --- *)
-
-(* onPointerDown fires on mouse press or touch start.                      *)
-
-on_pointer_down_handler
-                    = "onPointerDown" , [ pointer_params ] , ":" , NEWLINE
-                    , INDENT , INDENT , { statement } ;
-
-pointer_params      = "params" , "=" , string_literal ; (* e.g. params="x,y" *)
-
-
-(* --- 4.3 onPointerMove --- *)
-
-on_pointer_move_handler
-                    = "onPointerMove" , [ pointer_params ] , ":" , NEWLINE
-                    , INDENT , INDENT , { statement } ;
-
-
-(* --- 4.4 onKeyDown --- *)
-
-on_key_down_handler = "onKeyDown" , [ key_params ] , ":" , NEWLINE
-                    , INDENT , INDENT , { statement } ;
-
-key_params          = "params" , "=" , string_literal ; (* e.g. params="key" *)
-
-
-(* ======================================================================== *)
-(* 5. DRAWING API CALLS                                                     *)
-(* ======================================================================== *)
-
-(* All drawing calls are methods on the implicit "canvas" object.          *)
+(* All canvas calls use named attributes. Calls with `:` at the end open a  *)
+(* scoped child block; calls without `:` are single-line statements.        *)
 
 canvas_call         = "canvas" , "." , canvas_method ;
 
-canvas_method       = canvas_clear
-                    | canvas_circle
-                    | canvas_circle_filled
-                    | canvas_rect
-                    | canvas_rect_filled
-                    | canvas_line
-                    | canvas_text
-                    | canvas_image ;
+canvas_method       = canvas_clear_call
+                    | canvas_circle_call
+                    | canvas_rect_call
+                    | canvas_line_call
+                    | canvas_triangle_call
+                    | canvas_ellipse_call
+                    | canvas_text_call
+                    | canvas_image_call
+                    | canvas_sprite_call
+                    | canvas_transform_call ;
 
-(* canvas.clear — erases the entire drawing surface.                       *)
-canvas_clear        = "clear" ;
+(* canvas.clear  OR  canvas.clear color="#hex"                              *)
+canvas_clear_call   = "clear" , [ "color" , "=" , string_literal ] ;
 
-(* canvas.circle(x, y, radius, color) — outline circle.                   *)
-canvas_circle       = "circle"
-                    , "(" , expression , "," , expression
-                    , "," , expression , "," , expression , ")" ;
+(* canvas.circle x= y= radius= color= [filled=] [stroke=]                  *)
+canvas_circle_call  = "circle"
+                    , "x"      , "=" , expression
+                    , "y"      , "=" , expression
+                    , "radius" , "=" , expression
+                    , ( "color" , "=" , string_literal
+                      | "gradient" , "=" , string_literal )
+                    , [ "filled" , "=" , boolean_literal ]
+                    , [ "stroke" , "=" , expression ] ;
 
-(* canvas.circleFilled(x, y, radius, color) — filled circle.              *)
-canvas_circle_filled
-                    = "circleFilled"
-                    , "(" , expression , "," , expression
-                    , "," , expression , "," , expression , ")" ;
+(* canvas.rect x= y= width= height= color= [filled=] [cornerRadius=]        *)
+canvas_rect_call    = "rect"
+                    , "x"      , "=" , expression
+                    , "y"      , "=" , expression
+                    , "width"  , "=" , expression
+                    , "height" , "=" , expression
+                    , ( "color" , "=" , string_literal
+                      | "gradient" , "=" , string_literal )
+                    , [ "filled"       , "=" , boolean_literal ]
+                    , [ "cornerRadius" , "=" , expression ] ;
 
-(* canvas.rect(x, y, w, h, color) — outline rectangle.                    *)
-canvas_rect         = "rect"
-                    , "(" , expression , "," , expression
-                    , "," , expression , "," , expression
-                    , "," , expression , ")" ;
+(* canvas.line fromX= fromY= toX= toY= stroke= color=                      *)
+canvas_line_call    = "line"
+                    , "fromX" , "=" , expression
+                    , "fromY" , "=" , expression
+                    , "toX"   , "=" , expression
+                    , "toY"   , "=" , expression
+                    , [ "stroke" , "=" , expression ]
+                    , "color"  , "=" , string_literal ;
 
-(* canvas.rectFilled(x, y, w, h, color) — filled rectangle.               *)
-canvas_rect_filled  = "rectFilled"
-                    , "(" , expression , "," , expression
-                    , "," , expression , "," , expression
-                    , "," , expression , ")" ;
+(* canvas.triangle x1= y1= x2= y2= x3= y3= color= [filled=]                *)
+canvas_triangle_call
+                    = "triangle"
+                    , "x1" , "=" , expression , "y1" , "=" , expression
+                    , "x2" , "=" , expression , "y2" , "=" , expression
+                    , "x3" , "=" , expression , "y3" , "=" , expression
+                    , "color"  , "=" , string_literal
+                    , [ "filled" , "=" , boolean_literal ] ;
 
-(* canvas.line(x1, y1, x2, y2, color) — straight line.                    *)
-canvas_line         = "line"
-                    , "(" , expression , "," , expression
-                    , "," , expression , "," , expression
-                    , "," , expression , ")" ;
+(* canvas.ellipse x= y= radiusX= radiusY= color= [filled=]                  *)
+canvas_ellipse_call = "ellipse"
+                    , "x"       , "=" , expression
+                    , "y"       , "=" , expression
+                    , "radiusX" , "=" , expression
+                    , "radiusY" , "=" , expression
+                    , "color"   , "=" , string_literal
+                    , [ "filled" , "=" , boolean_literal ] ;
 
-(* canvas.text(text, x, y, size, color) — renders a string.               *)
-canvas_text         = "text"
-                    , "(" , expression , "," , expression
-                    , "," , expression , "," , expression
-                    , "," , expression , ")" ;
+(* canvas.text "string" x= y= size= color= [font=] [align=] [baseline=]     *)
+canvas_text_call    = "text"
+                    , string_literal
+                    , "x"    , "=" , expression
+                    , "y"    , "=" , expression
+                    , [ "size"     , "=" , expression ]
+                    , [ "color"    , "=" , string_literal ]
+                    , [ "font"     , "=" , string_literal ]
+                    , [ "align"    , "=" , string_literal ]
+                    , [ "baseline" , "=" , string_literal ] ;
 
-(* canvas.image(src, x, y, w, h) — draws an image or sprite frame.        *)
-canvas_image        = "image"
-                    , "(" , expression , "," , expression
-                    , "," , expression , "," , expression
-                    , "," , expression , ")" ;
+(* canvas.image src= x= y= [width=] [height=]                               *)
+canvas_image_call   = "image"
+                    , "src"    , "=" , string_literal
+                    , "x"      , "=" , expression
+                    , "y"      , "=" , expression
+                    , [ "width"  , "=" , expression ]
+                    , [ "height" , "=" , expression ] ;
 
+(* canvas.sprite "name" x= y=                        — static              *)
+(* canvas.sprite "name" x= y= clip=<index>           — spritesheet frame   *)
+(* canvas.sprite "name" x= y= state="fsmName"        — animState-driven    *)
+(* canvas.sprite "name" x= y= sheet="clip" clip=<n>  — explicit sheet+clip *)
+(* Optional on all forms: scaleX=, scaleY=, rotation=, alpha=,             *)
+(*   tint=, tintStrength=, anchorX=, anchorY=, flipX=, flipY=              *)
+canvas_sprite_call  = "sprite"
+                    , string_literal
+                    , "x" , "=" , expression
+                    , "y" , "=" , expression
+                    , [ canvas_sprite_mode ]
+                    , { canvas_sprite_opt_attr } ;
 
-(* ======================================================================== *)
-(* 6. SPRITE API CALLS                                                      *)
-(* ======================================================================== *)
+canvas_sprite_mode  = "clip"  , "=" , expression
+                    | "state" , "=" , string_literal
+                    | "sheet" , "=" , string_literal , "clip" , "=" , expression ;
 
-sprite_draw_call    = "sprite" , "." , sprite_method ;
+canvas_sprite_opt_attr
+                    = "scaleX"      , "=" , expression
+                    | "scaleY"      , "=" , expression
+                    | "rotation"    , "=" , expression
+                    | "alpha"       , "=" , expression
+                    | "tint"        , "=" , string_literal
+                    | "tintStrength", "=" , expression
+                    | "anchorX"     , "=" , expression
+                    | "anchorY"     , "=" , expression
+                    | "flipX"       , "=" , boolean_literal
+                    | "flipY"       , "=" , boolean_literal ;
 
-sprite_method       = sprite_draw ;
+(* canvas.save / canvas.restore / canvas.translate / canvas.rotate / etc.   *)
+canvas_transform_call
+                    = canvas_save_call
+                    | canvas_restore_call
+                    | canvas_translate_call
+                    | canvas_rotate_call
+                    | canvas_scale_call ;
 
-(* sprite.draw(id, frame, x, y, w, h) — draws one animation frame.        *)
-sprite_draw         = "draw"
-                    , "(" , expression , "," , expression
-                    , "," , expression , "," , expression
-                    , "," , expression , "," , expression , ")" ;
-
-
-(* ======================================================================== *)
-(* 7. AUDIO API CALLS                                                       *)
-(* ======================================================================== *)
-
-audio_call          = "audio" , "." , audio_method ;
-
-audio_method        = audio_play_call
-                    | audio_play_music_call
-                    | audio_stop_music_call ;
-
-(* audio.play(id) — plays a previously loaded sound effect.                *)
-audio_play_call     = "play"       , "(" , expression , ")" ;
-
-(* audio.playMusic(id) — starts streaming a loaded music track.            *)
-audio_play_music_call
-                    = "playMusic"  , "(" , expression , ")" ;
-
-(* audio.stopMusic() — stops the currently playing music track.            *)
-audio_stop_music_call
-                    = "stopMusic"  , "(" , ")" ;
-
-
-(* ======================================================================== *)
-(* 8. INPUT API EXPRESSIONS                                                 *)
-(* ======================================================================== *)
-
-(* Input reads are expressions that return current input state.            *)
-
-input_expression    = "input" , "." , input_property ;
-
-input_property      = "mouseX"
-                    | "mouseY"
-                    | key_down_check
-                    | key_just_pressed_check ;
-
-(* input.keyDown(key) — true while the key is held.                       *)
-key_down_check      = "keyDown"         , "(" , expression , ")" ;
-
-(* input.keyJustPressed(key) — true only on the first frame the key fires. *)
-key_just_pressed_check
-                    = "keyJustPressed"  , "(" , expression , ")" ;
-
-
-(* ======================================================================== *)
-(* 9. ANIMATION TIMER FUNCTIONS                                             *)
-(* ======================================================================== *)
-
-(* These functions are free-standing (not namespaced) inside a canvasScene. *)
-
-animation_function_call
-                    = delta_time_call
-                    | time_call
-                    | fps_call ;
-
-delta_time_call     = "deltaTime" , "(" , ")" ;
-time_call           = "time"      , "(" , ")" ;
-fps_call            = "fps"       , "(" , ")" ;
+canvas_save_call    = "save" ;
+canvas_restore_call = "restore" ;
+canvas_translate_call
+                    = "translate" , "x" , "=" , expression , "y" , "=" , expression ;
+canvas_rotate_call  = "rotate"    , "angle" , "=" , expression ;
+canvas_scale_call   = "scale"     , "x" , "=" , expression , "y" , "=" , expression ;
 
 
 (* ======================================================================== *)
-(* 10. COLLISION DETECTION API                                              *)
+(* §18. SCOPED DRAWING BLOCKS                                               *)
 (* ======================================================================== *)
 
-collision_call      = "collision" , "." , collision_method ;
+(* --- Layer routing --- *)
 
-collision_method    = collision_circle_circle
-                    | collision_rect_rect
-                    | collision_point_rect ;
+(* on layer "name": — routes all enclosed draw calls to a named layer.      *)
+layer_routing_block = "on" , "layer" , string_literal , ":" , NEWLINE
+                    , INDENT , { draw_statement } , DEDENT ;
 
-(* collision.circleCircle(x1, y1, r1, x2, y2, r2) — boolean.              *)
-collision_circle_circle
-                    = "circleCircle"
-                    , "(" , expression , "," , expression , "," , expression
-                    , "," , expression , "," , expression , "," , expression , ")" ;
 
-(* collision.rectRect(x1, y1, w1, h1, x2, y2, w2, h2) — boolean.          *)
-collision_rect_rect = "rectRect"
-                    , "(" , expression , "," , expression
-                    , "," , expression , "," , expression
-                    , "," , expression , "," , expression
-                    , "," , expression , "," , expression , ")" ;
+(* --- Transform group --- *)
 
-(* collision.pointRect(px, py, rx, ry, rw, rh) — boolean.                 *)
+(* canvas.group x= y= [rotation=] [scaleX=] [scaleY=] [alpha=]:            *)
+(* Children inherit the group's transform. Group attrs are animatable.      *)
+canvas_group_block  = "canvas" , "." , "group"
+                    , "x" , "=" , expression
+                    , "y" , "=" , expression
+                    , [ "rotation" , "=" , expression ]
+                    , [ "scaleX"   , "=" , expression ]
+                    , [ "scaleY"   , "=" , expression ]
+                    , [ "alpha"    , "=" , expression ]
+                    , ":" , NEWLINE
+                    , INDENT , { draw_statement } , DEDENT ;
+
+
+(* --- Clip/mask region --- *)
+
+(* canvas.clip x= y= width= height=:   — rectangular mask                  *)
+(* canvas.clip x= y= radius=:          — circular mask                     *)
+(* canvas.clip path="name":            — named-path mask                   *)
+canvas_clip_block   = "canvas" , "." , "clip"
+                    , canvas_clip_shape
+                    , ":" , NEWLINE
+                    , INDENT , { draw_statement } , DEDENT ;
+
+canvas_clip_shape   = ( "x" , "=" , expression
+                        , "y" , "=" , expression
+                        , ( ( "width"  , "=" , expression
+                              , "height" , "=" , expression )
+                            | ( "radius" , "=" , expression ) ) )
+                    | ( "path" , "=" , string_literal ) ;
+
+
+(* --- Effect scopes --- *)
+
+(* Scoped effects: canvas.alpha / shadow / blur / glow / blend              *)
+canvas_effect_block = canvas_alpha_block
+                    | canvas_shadow_block
+                    | canvas_blur_block
+                    | canvas_glow_block
+                    | canvas_blend_block ;
+
+(* canvas.alpha value=0.5:                                                  *)
+canvas_alpha_block  = "canvas" , "." , "alpha"
+                    , "value" , "=" , expression
+                    , ":" , NEWLINE
+                    , INDENT , { draw_statement } , DEDENT ;
+
+(* canvas.shadow blur= offsetX= offsetY= color=:                            *)
+canvas_shadow_block = "canvas" , "." , "shadow"
+                    , "blur"    , "=" , expression
+                    , "offsetX" , "=" , expression
+                    , "offsetY" , "=" , expression
+                    , "color"   , "=" , string_literal
+                    , ":" , NEWLINE
+                    , INDENT , { draw_statement } , DEDENT ;
+
+(* canvas.blur radius=:                                                     *)
+canvas_blur_block   = "canvas" , "." , "blur"
+                    , "radius" , "=" , expression
+                    , ":" , NEWLINE
+                    , INDENT , { draw_statement } , DEDENT ;
+
+(* canvas.glow color= blur=:                                                *)
+canvas_glow_block   = "canvas" , "." , "glow"
+                    , "color" , "=" , string_literal
+                    , "blur"  , "=" , expression
+                    , ":" , NEWLINE
+                    , INDENT , { draw_statement } , DEDENT ;
+
+(* canvas.blend mode="multiply":                                            *)
+canvas_blend_block  = "canvas" , "." , "blend"
+                    , "mode" , "=" , string_literal
+                    , ":" , NEWLINE
+                    , INDENT , { draw_statement } , DEDENT ;
+
+
+(* ======================================================================== *)
+(* §19. EVENT HANDLER BLOCKS                                                *)
+(* ======================================================================== *)
+
+(* param= names the variable injected into the handler body.                *)
+
+on_frame_handler    = "onFrame"
+                    , [ "param" , "=" , string_literal ]
+                    , ":" , NEWLINE
+                    , INDENT , { statement } , DEDENT ;
+
+on_pointer_down_handler
+                    = "onPointerDown"
+                    , [ "param" , "=" , string_literal ]
+                    , ":" , NEWLINE
+                    , INDENT , { statement } , DEDENT ;
+
+on_pointer_move_handler
+                    = "onPointerMove"
+                    , [ "param" , "=" , string_literal ]
+                    , ":" , NEWLINE
+                    , INDENT , { statement } , DEDENT ;
+
+on_pointer_up_handler
+                    = "onPointerUp"
+                    , [ "param" , "=" , string_literal ]
+                    , ":" , NEWLINE
+                    , INDENT , { statement } , DEDENT ;
+
+on_key_down_handler = "onKeyDown"
+                    , [ "param" , "=" , string_literal ]
+                    , ":" , NEWLINE
+                    , INDENT , { statement } , DEDENT ;
+
+on_key_up_handler   = "onKeyUp"
+                    , [ "param" , "=" , string_literal ]
+                    , ":" , NEWLINE
+                    , INDENT , { statement } , DEDENT ;
+
+(* Lifecycle hooks.                                                         *)
+on_exit_handler     = "onExit"   , ":" , NEWLINE , INDENT , { statement } , DEDENT ;
+on_pause_handler    = "onPause"  , ":" , NEWLINE , INDENT , { statement } , DEDENT ;
+on_resume_handler   = "onResume" , ":" , NEWLINE , INDENT , { statement } , DEDENT ;
+
+
+(* ======================================================================== *)
+(* §20. ANIMATION CONTROL EXPRESSIONS                                       *)
+(* ======================================================================== *)
+
+(* These are statement-level expressions valid inside any handler or init:  *)
+
+animation_control   = tween_control
+                    | timeline_control
+                    | anim_state_control
+                    | particles_control
+                    | animate_inline ;
+
+(* --- Tween control --- *)
+tween_control       = "play"   , "tween"    , string_literal
+                    | "pause"  , "tween"    , string_literal
+                    | "stop"   , "tween"    , string_literal
+                    | "resume" , "tween"    , string_literal ;
+
+(* --- Timeline control --- *)
+timeline_control    = "play"   , "timeline" , string_literal
+                    | "pause"  , "timeline" , string_literal
+                    | "stop"   , "timeline" , string_literal
+                    | "seek"   , "timeline" , string_literal , "to" , "=" , expression ;
+
+(* --- AnimState control --- *)
+anim_state_control  = "start"  , "animState" , string_literal
+                    | anim_state_force_expr
+                    | anim_state_current_expr ;
+
+(* animState.force "machineName" to="stateName"                             *)
+anim_state_force_expr
+                    = "animState" , "." , "force"
+                    , string_literal
+                    , "to" , "=" , string_literal ;
+
+(* animState.current "machineName" — returns current state name string.     *)
+anim_state_current_expr
+                    = "animState" , "." , "current" , string_literal ;
+
+(* --- Particles control --- *)
+particles_control   = "emit"  , "particles" , string_literal
+                                            , "x" , "=" , expression
+                                            , "y" , "=" , expression
+                    | "start" , "particles" , string_literal
+                                            , "x" , "=" , expression
+                                            , "y" , "=" , expression
+                    | "stop"  , "particles" , string_literal ;
+
+(* --- Inline animate --- *)
+(* animate varName [from=expr] to=expr duration=expr [ease="name"]         *)
+animate_inline      = "animate" , identifier
+                    , [ "from"     , "=" , expression ]
+                    , "to"         , "=" , expression
+                    , "duration"   , "=" , expression
+                    , [ "ease"     , "=" , string_literal ] ;
+
+
+(* ======================================================================== *)
+(* §21. AUDIO API                                                           *)
+(* ======================================================================== *)
+
+audio_expression    = audio_sfx_call
+                    | audio_music_call
+                    | audio_master_call ;
+
+(* audio.play "name" [volume=] [pitch=]                                     *)
+audio_sfx_call      = "audio" , "." , "play"
+                    , string_literal
+                    , [ "volume" , "=" , expression ]
+                    , [ "pitch"  , "=" , expression ] ;
+
+(* audio.music.play "name" [loop=] [volume=]                                *)
+(* audio.music.stop                                                         *)
+(* audio.music.pause                                                        *)
+(* audio.music.resume                                                       *)
+(* audio.music.fadeOut duration=                                            *)
+(* audio.music.crossfade "newTrack" duration=                               *)
+audio_music_call    = "audio" , "." , "music" , "." , audio_music_method ;
+
+audio_music_method  = "play"      , string_literal
+                                  , [ "loop"   , "=" , boolean_literal ]
+                                  , [ "volume" , "=" , expression ]
+                    | "stop"
+                    | "pause"
+                    | "resume"
+                    | "fadeOut"    , "duration" , "=" , expression
+                    | "crossfade"  , string_literal , "duration" , "=" , expression ;
+
+(* audio.masterVolume value=                                                *)
+audio_master_call   = "audio" , "." , "masterVolume" , "value" , "=" , expression ;
+
+
+(* ======================================================================== *)
+(* §22. INPUT API EXPRESSIONS                                               *)
+(* ======================================================================== *)
+
+input_expression    = input_mouse_expr
+                    | input_key_expr
+                    | input_touch_expr
+                    | input_gamepad_expr ;
+
+input_mouse_expr    = "input" , "." , ( "mouseX" | "mouseY"
+                                      | "mousePressed"
+                                      | "mouseJustPressed"
+                                      | "mouseJustReleased"
+                                      | "wheelY" ) ;
+
+input_key_expr      = "input" , "." ,
+                    ( ( "keyDown"         , "(" , string_literal , ")" )
+                    | ( "keyJustPressed"  , "(" , string_literal , ")" )
+                    | ( "keyJustReleased" , "(" , string_literal , ")" )
+                    | "lastKey" ) ;
+
+input_touch_expr    = "input" , "." ,
+                    ( "touchCount"
+                    | ( "touchX" , "(" , expression , ")" )
+                    | ( "touchY" , "(" , expression , ")" ) ) ;
+
+input_gamepad_expr  = "input" , "." ,
+                    ( ( "gamepadConnected"  , "(" , expression , ")" )
+                    | ( "gamepadButton"     , "(" , expression , "," , expression , ")" )
+                    | ( "gamepadAxis"       , "(" , expression , "," , expression , ")" )
+                    | ( "gamepadLeftStickX" , "(" , expression , ")" )
+                    | ( "gamepadLeftStickY" , "(" , expression , ")" ) ) ;
+
+
+(* ======================================================================== *)
+(* §23. COLLISION DETECTION API                                             *)
+(* ======================================================================== *)
+
+collision_expression
+                    = "collision" , "." , collision_method ;
+
+collision_method    = collision_circles
+                    | collision_rects
+                    | collision_point_rect
+                    | collision_circle_rect
+                    | collision_point_circle
+                    | collision_ray_circle ;
+
+(* collision.circles x1= y1= r1= x2= y2= r2=  — returns 1/0               *)
+collision_circles   = "circles"
+                    , "x1" , "=" , expression , "y1" , "=" , expression
+                    , "r1" , "=" , expression
+                    , "x2" , "=" , expression , "y2" , "=" , expression
+                    , "r2" , "=" , expression ;
+
+(* collision.rects x1= y1= w1= h1= x2= y2= w2= h2=  — returns 1/0         *)
+collision_rects     = "rects"
+                    , "x1" , "=" , expression , "y1" , "=" , expression
+                    , "w1" , "=" , expression , "h1" , "=" , expression
+                    , "x2" , "=" , expression , "y2" , "=" , expression
+                    , "w2" , "=" , expression , "h2" , "=" , expression ;
+
+(* collision.pointRect px= py= rx= ry= rw= rh=                             *)
 collision_point_rect
                     = "pointRect"
-                    , "(" , expression , "," , expression
-                    , "," , expression , "," , expression
-                    , "," , expression , "," , expression , ")" ;
+                    , "px" , "=" , expression , "py" , "=" , expression
+                    , "rx" , "=" , expression , "ry" , "=" , expression
+                    , "rw" , "=" , expression , "rh" , "=" , expression ;
+
+(* collision.circleRect cx= cy= r= rx= ry= rw= rh=                         *)
+collision_circle_rect
+                    = "circleRect"
+                    , "cx" , "=" , expression , "cy" , "=" , expression
+                    , "r"  , "=" , expression
+                    , "rx" , "=" , expression , "ry" , "=" , expression
+                    , "rw" , "=" , expression , "rh" , "=" , expression ;
+
+(* collision.pointCircle px= py= cx= cy= r=                                *)
+collision_point_circle
+                    = "pointCircle"
+                    , "px" , "=" , expression , "py" , "=" , expression
+                    , "cx" , "=" , expression , "cy" , "=" , expression
+                    , "r"  , "=" , expression ;
+
+(* collision.rayCircle ox= oy= dx= dy= cx= cy= r=  — returns distance/-1   *)
+collision_ray_circle
+                    = "rayCircle"
+                    , "ox" , "=" , expression , "oy" , "=" , expression
+                    , "dx" , "=" , expression , "dy" , "=" , expression
+                    , "cx" , "=" , expression , "cy" , "=" , expression
+                    , "r"  , "=" , expression ;
 
 
 (* ======================================================================== *)
-(* 11. CAMERA API                                                           *)
+(* §24. CAMERA CONTROL API                                                  *)
 (* ======================================================================== *)
 
-camera_call         = "camera" , "." , camera_method ;
+(* Imperative camera commands valid inside handlers.                        *)
+
+camera_expression   = "camera" , "." , camera_method ;
 
 camera_method       = camera_set_position
                     | camera_set_zoom
-                    | camera_shake ;
+                    | camera_shake_call ;
 
-(* camera.setPosition(x, y) — moves the camera viewport.                  *)
-camera_set_position = "setPosition" , "(" , expression , "," , expression , ")" ;
+camera_set_position = "setPosition"
+                    , "x" , "=" , expression
+                    , "y" , "=" , expression ;
 
-(* camera.setZoom(scale) — sets the zoom factor (1.0 = no zoom).           *)
-camera_set_zoom     = "setZoom"     , "(" , expression , ")" ;
+camera_set_zoom     = "setZoom" , "zoom" , "=" , expression ;
 
-(* camera.shake(intensity, duration) — applies a screen shake effect.      *)
-camera_shake        = "shake"       , "(" , expression , "," , expression , ")" ;
-
-
-(* ======================================================================== *)
-(* 12. EASING FUNCTIONS                                                     *)
-(* ======================================================================== *)
-
-(* Easing functions map a normalized time value t (0.0–1.0) to an eased    *)
-(* output value. They are available as ease.<name>(t).                     *)
-
-ease_call           = "ease" , "." , ease_function ;
-
-ease_function       = ease_linear
-                    | ease_in_quad
-                    | ease_out_quad
-                    | ease_in_out_quad ;
-
-ease_linear         = "linear"     , "(" , expression , ")" ;
-ease_in_quad        = "inQuad"     , "(" , expression , ")" ;
-ease_out_quad       = "outQuad"    , "(" , expression , ")" ;
-ease_in_out_quad    = "inOutQuad"  , "(" , expression , ")" ;
+camera_shake_call   = "shake"
+                    , "intensity" , "=" , expression
+                    , "duration"  , "=" , expression ;
 
 
 (* ======================================================================== *)
-(* 13. SCENE MANAGEMENT                                                     *)
+(* §25. SCENE MANAGEMENT API                                                *)
 (* ======================================================================== *)
 
-(* Scene functions navigate between named canvasScene blocks.              *)
+scene_expression    = "scene" , "." , scene_method ;
 
-scene_call          = "scene" , "." , scene_method ;
+scene_method        = scene_change_call
+                    | scene_change_animated_call
+                    | scene_push_call
+                    | scene_pop_call
+                    | scene_set_call
+                    | scene_get_call ;
 
-scene_method        = scene_change
-                    | scene_push
-                    | scene_pop
-                    | scene_current ;
+(* scene.change "name"                                                      *)
+scene_change_call   = "change"  , string_literal ;
 
-(* scene.change(name) — replaces the current scene (clears stack).         *)
-scene_change        = "change"  , "(" , ( string_literal | identifier ) , ")" ;
+(* scene.changeTo "name" transition="fade" duration=0.5                    *)
+scene_change_animated_call
+                    = "changeTo" , string_literal
+                    , [ "transition" , "=" , string_literal ]
+                    , [ "duration"   , "=" , expression ] ;
 
-(* scene.push(name) — pushes a new scene on top, pausing the current one.  *)
-scene_push          = "push"    , "(" , ( string_literal | identifier ) , ")" ;
+(* scene.push "name"                                                        *)
+scene_push_call     = "push"    , string_literal ;
 
-(* scene.pop() — returns to the previous scene on the stack.               *)
-scene_pop           = "pop"     , "(" , ")" ;
+(* scene.pop()                                                              *)
+scene_pop_call      = "pop" , "(" , ")" ;
 
-(* scene.current() — returns the name of the currently active scene.      *)
-scene_current       = "current" , "(" , ")" ;
+(* scene.set "key" value=expr                                               *)
+scene_set_call      = "set" , string_literal , "value" , "=" , expression ;
+
+(* scene.get "key"                                                          *)
+scene_get_call      = "get" , string_literal ;
 
 
 (* ======================================================================== *)
-(* 14. BUILT-IN TYPES                                                       *)
+(* §26. CANVAS / UI BRIDGE                                                  *)
 (* ======================================================================== *)
 
-(* These types are injected into scope by the frame-canvas plugin.         *)
+(* page.set exposes canvas state to surrounding frame.ui HTML layer.        *)
+(* page.get reads values set by the HTML layer.                             *)
+
+page_expression     = "page" , "." , page_method ;
+
+page_method         = "set" , string_literal , "value" , "=" , expression
+                    | "get" , string_literal ;
+
+
+(* ======================================================================== *)
+(* §27. TIMING FUNCTIONS                                                    *)
+(* ======================================================================== *)
+
+(* Free-standing functions available anywhere inside canvasScene.           *)
+
+timing_expression   = "deltaTime" , "(" , ")"
+                    | "time"      , "(" , ")"
+                    | "fps"       , "(" , ")" ;
+
+
+(* ======================================================================== *)
+(* §28. EASING REFERENCE                                                    *)
+(* ======================================================================== *)
+
+(* Easing names are used as string literals in ease= attributes.            *)
+(* The standard library defines the following names:                        *)
+(*                                                                          *)
+(*   "linear"                                                               *)
+(*   "easeInQuad"    "easeOutQuad"    "easeInOutQuad"                       *)
+(*   "easeInCubic"   "easeOutCubic"   "easeInOutCubic"                      *)
+(*   "easeInSine"    "easeOutSine"    "easeInOutSine"                       *)
+(*   "easeInExpo"    "easeOutExpo"    "easeInOutExpo"                       *)
+(*   "easeInElastic" "easeOutElastic" "easeInOutElastic"                    *)
+(*   "easeInBounce"  "easeOutBounce"  "easeInOutBounce"                     *)
+(*   "easeInBack"    "easeOutBack"    "easeInOutBack"                       *)
+(*                                                                          *)
+(* Custom easing names are registered at scene level:                       *)
+(*   customEase "snap" x1=0.68 y1=-0.55 x2=0.265 y2=1.55                  *)
+(* and then referenced as:  ease = "snap"                                   *)
+(*                                                                          *)
+(* The runtime validates the easing name at load time and raises an error   *)
+(* if neither a built-in nor a registered custom ease matches.              *)
+
+easing_name         = string_literal ; (* validated against registered set *)
+
+
+(* ======================================================================== *)
+(* §29. BUILT-IN TYPES                                                      *)
+(* ======================================================================== *)
+
+(* Types injected into scope by the frame.canvas plugin.                    *)
 
 canvas_plugin_type  = "Canvas"
                     | "Sprite"
                     | "Sound"
                     | "Music"
-                    | "Image" ;
+                    | "Image"
+                    | "Font"
+                    | "Tween"
+                    | "Timeline"
+                    | "AnimState"
+                    | "Particles"
+                    | "Gradient"
+                    | "Path" ;
 
 
 (* ======================================================================== *)
-(* 15. INTEGRATION WITH CORE GRAMMAR                                        *)
+(* §30. INTEGRATION WITH CORE GRAMMAR                                       *)
 (* ======================================================================== *)
 
 (* top_level_declaration (core) is extended to also accept:                 *)
 (*   canvas_scene_block                                                     *)
 
 (* expression (core) is extended to also accept:                            *)
-(*   canvas_call | sprite_draw_call | audio_call | input_expression        *)
-(*   | animation_function_call | collision_call | camera_call              *)
-(*   | ease_call | scene_call                                               *)
+(*   canvas_call | audio_expression | input_expression                      *)
+(*   | animation_control | collision_expression | camera_expression         *)
+(*   | scene_expression | page_expression | timing_expression               *)
+(*   | animate_inline | anim_state_control                                  *)
 
 (* statement (core) is extended to also accept:                             *)
-(*   draw_statement | asset_load_statement                                  *)
+(*   draw_statement | animation_control | audio_expression                  *)
+(*   | scene_expression | page_expression | particles_control               *)
+(*   | tween_control | timeline_control                                     *)
 
-(* type (core) is extended to also accept: canvas_plugin_type              *)
+(* type (core) is extended to also accept: canvas_plugin_type               *)
+
+(* identifier (core) is the token used for state variable names,            *)
+(* asset names (used as string_literal in most contexts), layer names,      *)
+(* tween names, timeline names, animState names, and particles names.       *)
