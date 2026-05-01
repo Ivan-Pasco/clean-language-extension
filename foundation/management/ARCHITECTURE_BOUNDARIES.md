@@ -164,7 +164,7 @@ discovery::discover_project(&path);
 **MUST follow these rules:**
 - Pages in `app/pages/` with `.html` extension only
 - Components in `app/components/` with `.cln` extension
-- API endpoints in `app/api/` with `.cln` extension
+- API endpoints in `app/backend/api/` with `.cln` extension
 - Data models in `app/data/` with `.cln` extension
 - Styles in `public/css/` with `.css` extension only
 - No explicit `plugins:` blocks (auto-detected by folder)
@@ -211,7 +211,7 @@ The correct response when plugin output is broken:
 ## What To Do When You Discover a Boundary Violation
 
 1. **Do NOT fix it in the wrong component** — even if it's "quick"
-2. Create a cross-component prompt in `system-documents/cross-component-prompts/`
+2. Create a cross-component prompt in `foundation/management/cross-component-prompts/`
 3. Document exactly what code is misplaced and where it should go
 4. Continue working within your component's boundaries
 
@@ -222,6 +222,6 @@ The correct response when plugin output is broken:
 | 2026-02-23 | clean-manager | ~2,900 lines of framework codegen/discovery/build logic | Documented — pending extraction |
 | 2026-02-23 | Web Site Clean | 16 structural violations against Frame spec | Documented — pending restructure |
 | 2026-03-23 | clean-extension | Hardcoded language keywords in TextMate grammar + plugin-loader.ts duplicates language server responsibility | Documented — pending refactor to thin client (see IDE_EXTENSION_ARCHITECTURE.md) |
-| 2026-04-15 | clean-language-compiler | ~300 lines of HTML template parsing (html_block_to_code_rust) added to wasm_adapter.rs — duplicates frame.ui plugin logic | Reverted — root cause was codegen bug, not plugin logic |
+| 2026-04-15 | clean-language-compiler | ~300 lines of HTML template parsing (html_block_to_code_rust + strip_common_indent) added to wasm_adapter.rs — duplicates frame.ui plugin logic | **ACTIVE VIOLATION** — root cause is a codegen bug in string comparison/substring ops; Rust shims must be removed once that codegen bug is fixed. Tracked in TASKS.md. |
 
 When a violation is found and documented, add it to this table for tracking.
