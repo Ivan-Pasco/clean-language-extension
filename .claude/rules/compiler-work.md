@@ -84,7 +84,7 @@ Do NOT add a Rust shim. Instead:
 3. Note the affected plugin and version in the entry
 4. Continue with other work — a known-broken plugin is better than a hidden violation
 
-**The violation history**: `html_block_to_code_rust` and `strip_common_indent` in `wasm_adapter.rs` are active violations of this principle added in April 2026 as workarounds for a codegen bug. They must be removed once the codegen bug is fixed. See ARCHITECTURE_BOUNDARIES.md History table.
+**Historical note**: `html_block_to_code_rust` and `strip_common_indent` were added as workarounds in April 2026 and **removed May 1, 2026** once the plugin WASM was verified correct with compiler 0.30.103. See ARCHITECTURE_BOUNDARIES.md History table (status: RESOLVED).
 
 ## Build Verification
 After any change to `src/`:

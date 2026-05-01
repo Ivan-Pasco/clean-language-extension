@@ -222,6 +222,6 @@ The correct response when plugin output is broken:
 | 2026-02-23 | clean-manager | ~2,900 lines of framework codegen/discovery/build logic | Documented — pending extraction |
 | 2026-02-23 | Web Site Clean | 16 structural violations against Frame spec | Documented — pending restructure |
 | 2026-03-23 | clean-extension | Hardcoded language keywords in TextMate grammar + plugin-loader.ts duplicates language server responsibility | Documented — pending refactor to thin client (see IDE_EXTENSION_ARCHITECTURE.md) |
-| 2026-04-15 | clean-language-compiler | ~300 lines of HTML template parsing (html_block_to_code_rust + strip_common_indent) added to wasm_adapter.rs — duplicates frame.ui plugin logic | **ACTIVE VIOLATION** — root cause is a codegen bug in string comparison/substring ops; Rust shims must be removed once that codegen bug is fixed. Tracked in TASKS.md. |
+| 2026-04-15 | clean-language-compiler | ~300 lines of HTML template parsing (html_block_to_code_rust + strip_common_indent) added to wasm_adapter.rs — duplicates frame.ui plugin logic | **RESOLVED** 2026-05-01 — shims removed from wasm_adapter.rs; plugin WASM verified correct in 0.30.103 (complex-function bug and string comparison bug both absent). |
 
 When a violation is found and documented, add it to this table for tracking.
